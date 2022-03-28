@@ -126,4 +126,61 @@
             </div>
         </div>
     </div>
+     {{-- code --}}
+    <div class="row hide">
+        <div class="col-sm-6">
+            <div class="form-group">
+                {!! Form::label('code_label_1', __('lang_v1.code_1_name') . ':') !!}
+                <div class="input-group">
+                    <span class="input-group-addon">
+                        <i class="fa fa-info"></i>
+                    </span>
+                    {!! Form::text('code_label_1', $business->code_label_1, ['class' => 'form-control']); !!}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div class="form-group">
+                {!! Form::label('code_1', __('lang_v1.code_1') . ':') !!}
+                <div class="input-group">
+                    <span class="input-group-addon">
+                        <i class="fa fa-info"></i>
+                    </span>
+                    {!! Form::text('code_1', $business->code_1, ['class' => 'form-control']); !!}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div class="form-group">
+                {!! Form::label('code_label_2', __('lang_v1.code_2_name') . ':') !!}
+                <div class="input-group">
+                    <span class="input-group-addon">
+                        <i class="fa fa-info"></i>
+                    </span>
+                    {!! Form::text('code_label_2', $business->code_label_2, ['class' => 'form-control']); !!}
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6">
+            <div class="form-group">
+                {!! Form::label('code_2', __('lang_v1.code_2') . ':') !!}
+                <div class="input-group">
+                    <span class="input-group-addon">
+                        <i class="fa fa-info"></i>
+                    </span>
+                    {!! Form::text('code_2', $business->code_2, ['class' => 'form-control']); !!}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row hide">
+        <div class="col-sm-8">
+            <div class="form-group">
+                <label>
+                    {!! Form::checkbox('common_settings[is_enabled_export]', true, !empty($common_settings['is_enabled_export']) ? true : false , 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.enable_export' ) }}
+                </label>
+            </div>
+        </div>
+    </div>
 </div>

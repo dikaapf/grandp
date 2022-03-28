@@ -2,7 +2,7 @@
   <div class="modal-content">
     <div class="modal-header">
     <button type="button" class="close no-print" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-    <h4 class="modal-title" id="modalTitle"> @lang('sale.sell_details') (<b>@lang('sale.invoice_no'):</b> {{ $sell->invoice_no }})
+    <h4 class="modal-title" id="modalTitle"> @lang('sale.sell_details') (<b>@if($sell->type == 'sales_order') @lang('restaurant.order_no') @else @lang('sale.invoice_no') @endif :</b> {{ $sell->invoice_no }})
     </h4>
 </div>
 <div class="modal-body">
@@ -14,17 +14,23 @@
     <div class="row">
       @php
         $custom_labels = json_decode(session('business.custom_labels'), true);
+        $export_custom_fields = [];
+        if (!empty($sell->is_export) && !empty($sell->export_custom_fields_info)) {
+            $export_custom_fields = $sell->export_custom_fields_info;
+        }
       @endphp
-      <div class="col-sm-4">
-        <b>{{ __('sale.invoice_no') }}:</b> #{{ $sell->invoice_no }}<br>
+      <div class="@if(!empty($export_custom_fields)) col-sm-3 @else col-sm-4 @endif">
+        <b>@if($sell->type == 'sales_order') {{ __('restaurant.order_no') }} @else {{ __('sale.invoice_no') }} @endif:</b> #{{ $sell->invoice_no }}<br>
         <b>{{ __('sale.status') }}:</b> 
           @if($sell->status == 'draft' && $sell->is_quotation == 1)
             {{ __('lang_v1.quotation') }}
           @else
-            {{ __('sale.' . $sell->status) }}
+            {{ $statuses[$sell->status] ?? __('sale.' . $sell->status) }}
           @endif
         <br>
-        <b>{{ __('sale.payment_status') }}:</b> @if(!empty($sell->payment_status)){{ __('lang_v1.' . $sell->payment_status) }}
+        @if($sell->type != 'sales_order')
+          <b>{{ __('sale.payment_status') }}:</b> @if(!empty($sell->payment_status)){{ __('lang_v1.' . $sell->payment_status) }}
+          @endif
         @endif
         @if(!empty($custom_labels['sell']['custom_field_1']))
           <br><strong>{{$custom_labels['sell']['custom_field_1'] ?? ''}}: </strong> {{$sell->custom_field_1}}
@@ -38,6 +44,22 @@
         @if(!empty($custom_labels['sell']['custom_field_4']))
           <br><strong>{{$custom_labels['sell']['custom_field_4'] ?? ''}}: </strong> {{$sell->custom_field_4}}
         @endif
+
+        @if(!empty($sales_orders))
+              <br><br><strong>@lang('lang_v1.sales_orders'):</strong>
+             <table class="table table-slim no-border">
+               <tr>
+                 <th>@lang('lang_v1.sales_order')</th>
+                 <th>@lang('lang_v1.date')</th>
+               </tr>
+               @foreach($sales_orders as $so)
+                <tr>
+                  <td>{{$so->invoice_no}}</td>
+                  <td>{{@format_datetime($so->transaction_date)}}</td>
+                </tr>
+               @endforeach
+             </table>
+          @endif
         @if($sell->document_path)
           <br>
           <br>
@@ -48,7 +70,7 @@
           </a>
         @endif
       </div>
-      <div class="col-sm-4">
+      <div class="@if(!empty($export_custom_fields)) col-sm-3 @else col-sm-4 @endif">
         @if(!empty($sell->contact->supplier_business_name))
           {{ $sell->contact->supplier_business_name }}<br>
         @endif
@@ -73,7 +95,7 @@
         @endif
         
       </div>
-      <div class="col-sm-4">
+      <div class="@if(!empty($export_custom_fields)) col-sm-3 @else col-sm-4 @endif">
       @if(in_array('tables' ,$enabled_modules))
          <strong>@lang('restaurant.table'):</strong>
           {{$sell->table->name ?? ''}}<br>
@@ -128,10 +150,41 @@
           <strong>{{ $custom_labels['types_of_service']['custom_field_3'] ?? __('lang_v1.service_custom_field_3' )}}:</strong>
           {{$sell->service_custom_field_3}}<br>
           <strong>{{ $custom_labels['types_of_service']['custom_field_4'] ?? __('lang_v1.service_custom_field_4' )}}:</strong>
-          {{$sell->service_custom_field_4}}
+          {{$sell->service_custom_field_4}}<br>
+          <strong>{{ $custom_labels['types_of_service']['custom_field_5'] ?? __('lang_v1.custom_field', ['number' => 5])}}:</strong>
+          {{$sell->service_custom_field_5}}<br>
+          <strong>{{ $custom_labels['types_of_service']['custom_field_6'] ?? __('lang_v1.custom_field', ['number' => 6])}}:</strong>
+          {{$sell->service_custom_field_6}}
         @endif
       @endif
       </div>
+      @if(!empty($export_custom_fields))
+          <div class="col-sm-3">
+                @foreach($export_custom_fields as $label => $value)
+                    <strong>
+                        @php
+                            $export_label = __('lang_v1.export_custom_field1');
+                            if ($label == 'export_custom_field_1') {
+                                $export_label =__('lang_v1.export_custom_field1');
+                            } elseif ($label == 'export_custom_field_2') {
+                                $export_label = __('lang_v1.export_custom_field2');
+                            } elseif ($label == 'export_custom_field_3') {
+                                $export_label = __('lang_v1.export_custom_field3');
+                            } elseif ($label == 'export_custom_field_4') {
+                                $export_label = __('lang_v1.export_custom_field4');
+                            } elseif ($label == 'export_custom_field_5') {
+                                $export_label = __('lang_v1.export_custom_field5');
+                            } elseif ($label == 'export_custom_field_6') {
+                                $export_label = __('lang_v1.export_custom_field6');
+                            }
+                        @endphp
+
+                        {{$export_label}}
+                        :
+                    </strong> {{$value ?? ''}} <br>
+                @endforeach
+          </div>
+      @endif
     </div>
     <br>
     <div class="row">
@@ -145,8 +198,11 @@
         </div>
       </div>
     </div>
-
     <div class="row">
+      @php
+        $total_paid = 0;
+      @endphp
+      @if($sell->type != 'sales_order')
       <div class="col-sm-12 col-xs-12">
         <h4>{{ __('sale.payment_info') }}:</h4>
       </div>
@@ -161,9 +217,6 @@
               <th>{{ __('sale.payment_mode') }}</th>
               <th>{{ __('sale.payment_note') }}</th>
             </tr>
-            @php
-              $total_paid = 0;
-            @endphp
             @foreach($sell->payment_lines as $payment_line)
               @php
                 if($payment_line->is_return == 1){
@@ -195,7 +248,8 @@
           </table>
         </div>
       </div>
-      <div class="col-md-6 col-sm-12 col-xs-12">
+      @endif
+      <div class="col-md-6 col-sm-12 col-xs-12 @if($sell->type == 'sales_order') col-md-offset-6 @endif">
         <div class="table-responsive">
           <table class="table bg-gray">
             <tr>
@@ -235,11 +289,55 @@
                 @endif
               </td>
             </tr>
+            @if(!empty($line_taxes))
+            <tr>
+              <th>{{ __('lang_v1.line_taxes') }}:</th>
+              <td></td>
+              <td class="text-right">
+                @if(!empty($line_taxes))
+                  @foreach($line_taxes as $k => $v)
+                    <strong><small>{{$k}}</small></strong> - <span class="display_currency pull-right" data-currency_symbol="true">{{ $v }}</span><br>
+                  @endforeach
+                @else
+                0.00
+                @endif
+              </td>
+            </tr>
+            @endif
             <tr>
               <th>{{ __('sale.shipping') }}: @if($sell->shipping_details)({{$sell->shipping_details}}) @endif</th>
               <td><b>(+)</b></td>
               <td><span class="display_currency pull-right" data-currency_symbol="true">{{ $sell->shipping_charges }}</span></td>
             </tr>
+
+            @if( !empty( $sell->additional_expense_value_1 )  && !empty( $sell->additional_expense_key_1 ))
+              <tr>
+                <th>{{ $sell->additional_expense_key_1 }}:</th>
+                <td><b>(+)</b></td>
+                <td><span class="display_currency pull-right" >{{ $sell->additional_expense_value_1 }}</span></td>
+              </tr>
+            @endif
+            @if( !empty( $sell->additional_expense_value_2 )  && !empty( $sell->additional_expense_key_2 ))
+              <tr>
+                <th>{{ $sell->additional_expense_key_2 }}:</th>
+                <td><b>(+)</b></td>
+                <td><span class="display_currency pull-right" >{{ $sell->additional_expense_value_2 }}</span></td>
+              </tr>
+            @endif
+            @if( !empty( $sell->additional_expense_value_3 )  && !empty( $sell->additional_expense_key_3 ))
+              <tr>
+                <th>{{ $sell->additional_expense_key_3 }}:</th>
+                <td><b>(+)</b></td>
+                <td><span class="display_currency pull-right" >{{ $sell->additional_expense_value_3 }}</span></td>
+              </tr>
+            @endif
+            @if( !empty( $sell->additional_expense_value_4 ) && !empty( $sell->additional_expense_key_4 ))
+              <tr>
+                <th>{{ $sell->additional_expense_key_4 }}:</th>
+                <td><b>(+)</b></td>
+                <td><span class="display_currency pull-right" >{{ $sell->additional_expense_value_4 }}</span></td>
+              </tr>
+            @endif
             <tr>
               <th>{{ __('lang_v1.round_off') }}: </th>
               <td></td>
@@ -250,6 +348,7 @@
               <td></td>
               <td><span class="display_currency pull-right" data-currency_symbol="true">{{ $sell->final_total }}</span></td>
             </tr>
+            @if($sell->type != 'sales_order')
             <tr>
               <th>{{ __('sale.total_paid') }}:</th>
               <td></td>
@@ -265,6 +364,7 @@
                 @endphp
                 <span class="display_currency pull-right" data-currency_symbol="true" >{{ $sell->final_total - $total_paid }}</span></td>
             </tr>
+            @endif
           </table>
         </div>
       </div>
@@ -299,8 +399,9 @@
     </div>
   </div>
   <div class="modal-footer">
+    @if($sell->type != 'sales_order')
     <a href="#" class="print-invoice btn btn-success" data-href="{{route('sell.printInvoice', [$sell->id])}}?package_slip=true"><i class="fas fa-file-alt" aria-hidden="true"></i> @lang("lang_v1.packing_slip")</a>
-
+    @endif
     @can('print_invoice')
       <a href="#" class="print-invoice btn btn-primary" data-href="{{route('sell.printInvoice', [$sell->id])}}"><i class="fa fa-print" aria-hidden="true"></i> @lang("lang_v1.print_invoice")</a>
     @endcan

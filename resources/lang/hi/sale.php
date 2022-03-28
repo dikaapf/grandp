@@ -56,4 +56,7 @@
 "sale_date" => "बिक्री की तिथी",
 "list_pos" => "POS की सूची",
 "edit_sale" => "बिक्री संपादित करें",
+"shipping"=>"शिपिंग",
+"shipping_details"=>"परिवहन विवरण",
+"shipping_charges"=>"भेजने का शुल्क",
 ];

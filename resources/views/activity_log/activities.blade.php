@@ -13,10 +13,14 @@
                 {{__('lang_v1.' . $activity->description)}}
             </td>
             <td>
-                {{$activity->causer->user_full_name}}
+                {{$activity->causer->user_full_name ?? ''}}
                 @if(!empty($activity->getExtraProperty('from_api')))
                     <br>
                     <span class="label bg-gray">{{$activity->getExtraProperty('from_api')}}</span>
+                @endif
+
+                @if(!empty($activity->getExtraProperty('is_automatic')))
+                    <span class="label bg-gray">@lang('lang_v1.automatic')</span>
                 @endif
             </td>
             <td>
@@ -36,6 +40,14 @@
                             {{$update_note}}
                         @endif
                     @endif
+                @endif
+
+                @if(!empty($activity->getExtraProperty('email')))
+                    <b>@lang('business.email'): </b> {{$activity->getExtraProperty('email')}}
+                @endif
+
+                @if(!empty($activity->getExtraProperty('mobile')))
+                    <b>@lang('business.mobile'): </b> {{$activity->getExtraProperty('mobile')}}
                 @endif
             </td>
         </tr>

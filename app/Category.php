@@ -32,9 +32,10 @@ class Category extends Model
     public static function catAndSubCategories($business_id)
     {
         $all_categories = Category::where('business_id', $business_id)
-                        ->orderBy('name', 'asc')
-                        ->get()
-                        ->toArray();
+                                ->where('category_type', 'product')
+                                ->orderBy('name', 'asc')
+                                ->get()
+                                ->toArray();
                         
         if (empty($all_categories)) {
             return [];

@@ -56,4 +56,7 @@
 "sale_date" => "Data e shitjes",
 "list_pos" => "Listë POS",
 "edit_sale" => "Edit Shitje",
+"shipping"=>"Transporti",
+"shipping_details"=>"Detajet e Transportit",
+"shipping_charges"=>"Tarifat e Transportit",
 ];

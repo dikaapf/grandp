@@ -56,4 +56,7 @@
 "sale_date" => "Date de vente",
 "list_pos" => "Liste POS (PDV)",
 "edit_sale" => "Modifier la vente",
+"shipping"=>"Expédition",
+"shipping_details"=>"Les détails d'expédition",
+"shipping_charges"=>"Frais d'expédition",
 ];

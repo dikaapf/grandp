@@ -22,7 +22,7 @@
           <div class="col-sm-4">
             <div class="form-group">
               <div class="option-div">
-                <h4>FORMAT: <br>{{ date('Y') }}-XXXX <i class="fa fa-check-circle pull-right icon"></i></h4>
+                <h4>FORMAT: <br>{{ date('Y') }}{{config('constants.invoice_scheme_separator')}}XXXX <i class="fa fa-check-circle pull-right icon"></i></h4>
                 {!! Form::radio('scheme_type', 'year'); !!}
               </div>
             </div>

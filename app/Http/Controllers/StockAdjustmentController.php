@@ -261,7 +261,7 @@ class StockAdjustmentController extends Controller
         $stock_adjustment = Transaction::where('transactions.business_id', $business_id)
                     ->where('transactions.id', $id)
                     ->where('transactions.type', 'stock_adjustment')
-                    ->with(['stock_adjustment_lines', 'location', 'business', 'stock_adjustment_lines.variation', 'stock_adjustment_lines.variation.product', 'stock_adjustment_lines.variation.product_variation'])
+                    ->with(['stock_adjustment_lines', 'location', 'business', 'stock_adjustment_lines.variation', 'stock_adjustment_lines.variation.product', 'stock_adjustment_lines.variation.product_variation', 'stock_adjustment_lines.lot_details'])
                     ->first();
 
         $lot_n_exp_enabled = false;
@@ -374,6 +374,7 @@ class StockAdjustmentController extends Controller
             $business_id = $request->session()->get('user.business_id');
             $product = $this->productUtil->getDetailsFromVariation($variation_id, $business_id, $location_id);
             $product->formatted_qty_available = $this->productUtil->num_f($product->qty_available);
+            $type = !empty($request->input('type')) ? $request->input('type') : 'stock_adjustment';
 
             //Get lot number dropdown if enabled
             $lot_numbers = [];
@@ -385,9 +386,15 @@ class StockAdjustmentController extends Controller
                 }
             }
             $product->lot_numbers = $lot_numbers;
-            
-            return view('stock_adjustment.partials.product_table_row')
-            ->with(compact('product', 'row_index'));
+
+            $sub_units = $this->productUtil->getSubUnits($business_id, $product->unit_id, false, $product->id);
+            if ($type == 'stock_transfer') {
+                return view('stock_transfer.partials.product_table_row')
+                    ->with(compact('product', 'row_index', 'sub_units'));
+            } else {
+                return view('stock_adjustment.partials.product_table_row')
+                        ->with(compact('product', 'row_index', 'sub_units'));
+            }
         }
     }
 

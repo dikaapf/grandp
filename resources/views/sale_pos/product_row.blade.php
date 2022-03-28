@@ -1,5 +1,23 @@
-<tr class="product_row" data-row_index="{{$row_count}}">
+@php
+	$common_settings = session()->get('business.common_settings');
+	$multiplier = 1;
+@endphp
+
+@foreach($sub_units as $key => $value)
+	@if(!empty($product->sub_unit_id) && $product->sub_unit_id == $key)
+		@php
+			$multiplier = $value['multiplier'];
+		@endphp
+	@endif
+@endforeach
+
+<tr class="product_row" data-row_index="{{$row_count}}" @if(!empty($so_line)) data-so_id="{{$so_line->transaction_id}}" @endif>
 	<td>
+		@if(!empty($so_line))
+			<input type="hidden" 
+			name="products[{{$row_count}}][so_line_id]" 
+			value="{{$so_line->id}}">
+		@endif
 		@php
 			$product_name = $product->product_name . '<br/>' . $product->sub_sku ;
 			if(!empty($product->brand)){ $product_name .= ' ' . $product->brand ;}
@@ -30,6 +48,12 @@
 			$tax_id = $product->tax_id;
 			$item_tax = !empty($product->item_tax) ? $product->item_tax : 0;
 			$unit_price_inc_tax = $product->sell_price_inc_tax;
+
+			if(!empty($so_line)) {
+				$tax_id = $so_line->tax_id;
+				$item_tax = $so_line->item_tax;
+			}
+
 			if($hide_tax == 'hide'){
 				$tax_id = null;
 				$unit_price_inc_tax = $product->default_sell_price;
@@ -42,6 +66,12 @@
 				$discount_type = $discount->discount_type;
 				$discount_amount = $discount->discount_amount;
 			}
+
+			if(!empty($so_line)) {
+				$discount_type = $so_line->line_discount_type;
+				$discount_amount = $so_line->line_discount_amount;
+			}
+
   			$sell_line_note = '';
   			if(!empty($product->sell_line_note)){
   				$sell_line_note = $product->sell_line_note;
@@ -54,6 +84,10 @@
 
 		@php
 			$warranty_id = !empty($action) && $action == 'edit' && !empty($product->warranties->first())  ? $product->warranties->first()->id : $product->warranty_id;
+
+			if($discount_type == 'fixed') {
+				$discount_amount = $discount_amount * $multiplier;
+			}
 		@endphp
 
 		@if(empty($is_direct_sell))
@@ -72,8 +106,25 @@
 		@endif
 
 		@php
-			$max_qty_rule = $product->qty_available;
-			$max_qty_msg = __('validation.custom-messages.quantity_not_available', ['qty'=> $product->formatted_qty_available, 'unit' => $product->unit  ]);
+			$max_quantity = $product->qty_available;
+			$formatted_max_quantity = $product->formatted_qty_available;
+
+			if(!empty($action) && $action == 'edit') {
+				if(!empty($so_line)) {
+					$qty_available = $so_line->quantity - $so_line->so_quantity_invoiced + $product->quantity_ordered;
+					$max_quantity = $qty_available;
+					$formatted_max_quantity = number_format($qty_available, config('constants.currency_precision', 2), session('currency')['decimal_separator'], session('currency')['thousand_separator']);
+				}
+			} else {
+				if(!empty($so_line) && $so_line->qty_available <= $max_quantity) {
+					$max_quantity = $so_line->qty_available;
+					$formatted_max_quantity = $so_line->formatted_qty_available;
+				}
+			}
+			
+
+			$max_qty_rule = $max_quantity;
+			$max_qty_msg = __('validation.custom-messages.quantity_not_available', ['qty'=> $formatted_max_quantity, 'unit' => $product->unit  ]);
 		@endphp
 
 		@if( session()->get('business.enable_lot_number') == 1 || session()->get('business.enable_product_expiry') == 1)
@@ -85,7 +136,7 @@
 				$lot_no_line_id = $product->lot_no_line_id;
 			}
 		@endphp
-		@if(!empty($product->lot_numbers))
+		@if(!empty($product->lot_numbers) && empty($is_sales_order))
 			<select class="form-control lot_number input-sm" name="products[{{$row_count}}][lot_no_line_id]" @if(!empty($product->transaction_sell_lines_id)) disabled @endif>
 				<option value="">@lang('lang_v1.lot_n_expiry')</option>
 				@foreach($product->lot_numbers as $lot_number)
@@ -146,7 +197,6 @@
 		@endif
 
 		@php
-			$multiplier = 1;
 			$allow_decimal = true;
 			if($product->unit_allow_decimal != 1) {
 				$allow_decimal = false;
@@ -155,7 +205,6 @@
 		@foreach($sub_units as $key => $value)
         	@if(!empty($product->sub_unit_id) && $product->sub_unit_id == $key)
         		@php
-        			$multiplier = $value['multiplier'];
         			$max_qty_rule = $max_qty_rule / $multiplier;
         			$unit_name = $value['name'];
         			$max_qty_msg = __('validation.custom-messages.quantity_not_available', ['qty'=> $max_qty_rule, 'unit' => $unit_name  ]);
@@ -184,7 +233,7 @@
 			@endif
 			data-rule-required="true" 
 			data-msg-required="@lang('validation.custom-messages.this_field_is_required')" 
-			@if($product->enable_stock && empty($pos_settings['allow_overselling']) )
+			@if($product->enable_stock && empty($pos_settings['allow_overselling']) && empty($is_sales_order) )
 				data-rule-max-value="{{$max_qty_rule}}" data-qty_available="{{$product->qty_available}}" data-msg-max-value="{{$max_qty_msg}}" 
 				data-msg_max_default="@lang('validation.custom-messages.quantity_not_available', ['qty'=> $product->formatted_qty_available, 'unit' => $product->unit  ])" 
 			@endif 
@@ -251,10 +300,26 @@
 		@endif
 	</td>
 	@if(!empty($is_direct_sell))
-		<td @if(!auth()->user()->can('edit_product_price_from_sale_screen')) hide @endif">
-			<input type="text" name="products[{{$row_count}}][unit_price]" class="form-control pos_unit_price input_number mousetrap" value="{{@num_format(!empty($product->unit_price_before_discount) ? $product->unit_price_before_discount : $product->default_sell_price)}}">
+		@if(!empty($pos_settings['inline_service_staff']))
+			<td>
+				<div class="form-group">
+					<div class="input-group">
+						{!! Form::select("products[" . $row_count . "][res_service_staff_id]", $waiters, !empty($product->res_service_staff_id) ? $product->res_service_staff_id : null, ['class' => 'form-control select2 order_line_service_staff', 'placeholder' => __('restaurant.select_service_staff'), 'required' => (!empty($pos_settings['is_service_staff_required']) && $pos_settings['is_service_staff_required'] == 1) ? true : false ]); !!}
+					</div>
+				</div>
+			</td>
+		@endif
+		@php
+			$pos_unit_price = !empty($product->unit_price_before_discount) ? $product->unit_price_before_discount : $product->default_sell_price;
+
+			if(!empty($so_line)) {
+				$pos_unit_price = $so_line->unit_price_before_discount;
+			}
+		@endphp
+		<td class="@if(!auth()->user()->can('edit_product_price_from_sale_screen')) hide @endif">
+			<input type="text" name="products[{{$row_count}}][unit_price]" class="form-control pos_unit_price input_number mousetrap" value="{{@num_format($pos_unit_price)}}" @if(!empty($pos_settings['enable_msp'])) data-rule-min-value="{{$pos_unit_price}}" data-msg-min-value="{{__('lang_v1.minimum_selling_price_error_msg', ['price' => @num_format($pos_unit_price)])}}" @endif>
 		</td>
-		<td @if(!$edit_discount) hide @endif>
+		<td @if(!$edit_discount) class="hide" @endif>
 			{!! Form::text("products[$row_count][line_discount_amount]", @num_format($discount_amount), ['class' => 'form-control input_number row_discount_amount']); !!}<br>
 			{!! Form::select("products[$row_count][line_discount_type]", ['fixed' => __('lang_v1.fixed'), 'percentage' => __('lang_v1.percentage')], $discount_type , ['class' => 'form-control row_discount_type']); !!}
 			@if(!empty($discount))
@@ -266,22 +331,26 @@
 		
 			{!! Form::select("products[$row_count][tax_id]", $tax_dropdown['tax_rates'], $tax_id, ['placeholder' => 'Select', 'class' => 'form-control tax_id'], $tax_dropdown['attributes']); !!}
 		</td>
-		@if(!empty($warranties))
-			{!! Form::select("products[$row_count][warranty_id]", $warranties, $warranty_id, ['placeholder' => __('messages.please_select'), 'class' => 'form-control']); !!}
-		@endif
-	@endif
-	@if(!empty($pos_settings['inline_service_staff']) && !empty($waiters))
-		<td>
-			<div class="form-group">
-				<div class="input-group">
-					{!! Form::select("products[" . $row_count . "][res_service_staff_id]", $waiters, !empty($product->res_service_staff_id) ? $product->res_service_staff_id : null, ['class' => 'form-control select2 order_line_service_staff', 'placeholder' => __('restaurant.select_service_staff'), 'required' => (!empty($pos_settings['is_service_staff_required']) && $pos_settings['is_service_staff_required'] == 1) ? true : false ]); !!}
+
+	@else
+		@if(!empty($pos_settings['inline_service_staff']))
+			<td>
+				<div class="form-group">
+					<div class="input-group">
+						{!! Form::select("products[" . $row_count . "][res_service_staff_id]", $waiters, !empty($product->res_service_staff_id) ? $product->res_service_staff_id : null, ['class' => 'form-control select2 order_line_service_staff', 'placeholder' => __('restaurant.select_service_staff'), 'required' => (!empty($pos_settings['is_service_staff_required']) && $pos_settings['is_service_staff_required'] == 1) ? true : false ]); !!}
+					</div>
 				</div>
-			</div>
-		</td>
+			</td>
+		@endif
 	@endif
 	<td class="{{$hide_tax}}">
 		<input type="text" name="products[{{$row_count}}][unit_price_inc_tax]" class="form-control pos_unit_price_inc_tax input_number" value="{{@num_format($unit_price_inc_tax)}}" @if(!$edit_price) readonly @endif @if(!empty($pos_settings['enable_msp'])) data-rule-min-value="{{$unit_price_inc_tax}}" data-msg-min-value="{{__('lang_v1.minimum_selling_price_error_msg', ['price' => @num_format($unit_price_inc_tax)])}}" @endif>
 	</td>
+	@if(!empty($common_settings['enable_product_warranty']) && !empty($is_direct_sell))
+		<td>
+			{!! Form::select("products[$row_count][warranty_id]", $warranties, $warranty_id, ['placeholder' => __('messages.please_select'), 'class' => 'form-control']); !!}
+		</td>
+	@endif
 	<td class="text-center">
 		@php
 			$subtotal_type = !empty($pos_settings['is_pos_subtotal_editable']) ? 'text' : 'hidden';

@@ -77,7 +77,7 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
-        $this->businessUtil->activityLog($user, 'login');
+        $this->businessUtil->activityLog($user, 'login', null, [], false, $user->business_id);
 
         if (!$user->business->is_active) {
             \Auth::logout();

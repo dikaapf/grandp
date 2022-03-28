@@ -8,9 +8,9 @@ use App\AccountTransaction;
 use App\TransactionPayment;
 use App\Utils\TransactionUtil;
 use DB;
-
 use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
+use App\BusinessLocation;
 
 class AccountReportsController extends Controller
 {
@@ -39,20 +39,22 @@ class AccountReportsController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        $business_id = session()->get('user.business_id');
         if (request()->ajax()) {
-            $business_id = session()->get('user.business_id');
-
             $end_date = !empty(request()->input('end_date')) ? $this->transactionUtil->uf_date(request()->input('end_date')) : \Carbon::now()->format('Y-m-d');
+            $location_id = !empty(request()->input('location_id')) ? request()->input('location_id') : null;
 
             $purchase_details = $this->transactionUtil->getPurchaseTotals(
                 $business_id,
                 null,
-                $end_date
+                $end_date,
+                $location_id
             );
             $sell_details = $this->transactionUtil->getSellTotals(
                 $business_id,
                 null,
-                $end_date
+                $end_date,
+                $location_id
             );
 
             $transaction_types = ['sell_return'];
@@ -61,17 +63,18 @@ class AccountReportsController extends Controller
                 $business_id,
                 $transaction_types,
                 null,
-                $end_date
+                $end_date,
+                $location_id
             );
 
-            $account_details = $this->getAccountBalance($business_id, $end_date);
+            $account_details = $this->getAccountBalance($business_id, $end_date, 'others', $location_id);
             // $capital_account_details = $this->getAccountBalance($business_id, $end_date, 'capital');
 
             //Get Closing stock
             $closing_stock = $this->transactionUtil->getOpeningClosingStock(
                 $business_id,
                 $end_date,
-                null
+                $location_id
             );
 
             $output = [
@@ -85,7 +88,9 @@ class AccountReportsController extends Controller
             return $output;
         }
 
-        return view('account_reports.balance_sheet');
+        $business_locations = BusinessLocation::forDropdown($business_id, true);
+
+        return view('account_reports.balance_sheet')->with(compact('business_locations'));
     }
 
     /**
@@ -98,23 +103,26 @@ class AccountReportsController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        if (request()->ajax()) {
-            $business_id = session()->get('user.business_id');
+        $business_id = session()->get('user.business_id');
 
+        if (request()->ajax()) {
             $end_date = !empty(request()->input('end_date')) ? $this->transactionUtil->uf_date(request()->input('end_date')) : \Carbon::now()->format('Y-m-d');
+             $location_id = !empty(request()->input('location_id')) ? request()->input('location_id') : null;
 
             $purchase_details = $this->transactionUtil->getPurchaseTotals(
                 $business_id,
                 null,
-                $end_date
+                $end_date,
+                $location_id
             );
             $sell_details = $this->transactionUtil->getSellTotals(
                 $business_id,
                 null,
-                $end_date
+                $end_date,
+                $location_id
             );
 
-            $account_details = $this->getAccountBalance($business_id, $end_date);
+            $account_details = $this->getAccountBalance($business_id, $end_date, 'others', $location_id);
 
             // $capital_account_details = $this->getAccountBalance($business_id, $end_date, 'capital');
 
@@ -128,14 +136,16 @@ class AccountReportsController extends Controller
             return $output;
         }
 
-        return view('account_reports.trial_balance');
+        $business_locations = BusinessLocation::forDropdown($business_id, true);
+
+        return view('account_reports.trial_balance')->with(compact('business_locations'));
     }
 
     /**
      * Retrives account balances.
      * @return Obj
      */
-    private function getAccountBalance($business_id, $end_date, $account_type = 'others')
+    private function getAccountBalance($business_id, $end_date, $account_type = 'others', $location_id = null)
     {
         $query = Account::leftjoin(
             'account_transactions as AT',
@@ -153,6 +163,46 @@ class AccountReportsController extends Controller
         // } elseif ($account_type == 'capital') {
         //     $query->where('account_type', 'capital');
         // }
+
+        $permitted_locations = auth()->user()->permitted_locations();
+            $account_ids = [];
+        if ($permitted_locations != 'all') {
+            $locations = BusinessLocation::where('business_id', $business_id)
+                            ->whereIn('id', $permitted_locations)
+                            ->get();
+
+            foreach ($locations as $location) {
+                if (!empty($location->default_payment_accounts)) {
+                    $default_payment_accounts = json_decode($location->default_payment_accounts, true);
+                    foreach ($default_payment_accounts as $key => $account) {
+                        if (!empty($account['is_enabled']) && !empty($account['account'])) {
+                            $account_ids[] = $account['account'];
+                        }
+                    }
+                }
+            }
+
+            $account_ids = array_unique($account_ids);
+        }
+
+        if ($permitted_locations != 'all') {
+            $query->whereIn('accounts.id', $account_ids);
+        }
+
+        if (!empty($location_id)) {
+            $location = BusinessLocation::find($location_id);
+            if (!empty($location->default_payment_accounts)) {
+                $default_payment_accounts = json_decode($location->default_payment_accounts, true);
+                $account_ids = [];
+                foreach ($default_payment_accounts as $key => $account) {
+                    if (!empty($account['is_enabled']) && !empty($account['account'])) {
+                        $account_ids[] = $account['account'];
+                    }
+                }
+
+                $query->whereIn('accounts.id', $account_ids);
+            }
+        }
 
         $account_details = $query->select(['name',
                                         DB::raw("SUM( IF(AT.type='credit', amount, -1*amount) ) as balance")])
@@ -198,6 +248,11 @@ class AccountReportsController extends Controller
                                         'transaction_payments.id as payment_id',
                                         'transaction_payments.account_id'
                                     ]);
+
+            $permitted_locations = auth()->user()->permitted_locations();
+            if ($permitted_locations != 'all') {
+                $query->whereIn('T.location_id', $permitted_locations);
+            }
 
             $start_date = !empty(request()->input('start_date')) ? request()->input('start_date') : '';
             $end_date = !empty(request()->input('end_date')) ? request()->input('end_date') : '';

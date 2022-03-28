@@ -56,4 +56,7 @@
 "sale_date" => "تاريخ البيع",
 "list_pos" => "قائمة نقطة البيع",
 "edit_sale" => "تعديل البيع",
+"shipping"=>"شحن",
+"shipping_details"=>"تفاصيل الشحن",
+"shipping_charges"=>"رسوم الشحن",
 ];

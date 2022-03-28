@@ -141,8 +141,8 @@
 </div>
 @include('user.edit_profile_form_part', ['bank_details' => !empty($user->bank_details) ? json_decode($user->bank_details, true) : null])
 <div class="row">
-    <div class="col-md-12">
-        <button type="submit" class="btn btn-primary pull-right">@lang('messages.update')</button>
+    <div class="col-md-12 text-center">
+        <button type="submit" class="btn btn-primary btn-big">@lang('messages.update')</button>
     </div>
 </div>
 {!! Form::close() !!}

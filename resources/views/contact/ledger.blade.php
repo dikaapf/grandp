@@ -3,7 +3,14 @@
 	<link rel="stylesheet" href="{{ asset('css/app.css?v='.$asset_v) }}">
 @endif
 <div class="col-md-12 col-sm-12 @if(!empty($for_pdf)) width-100 align-right @endif">
-        <p class="text-right align-right"><strong>{{$contact->business->name}}</strong><br>{!! $contact->business->business_address !!}</p>
+        <p class="text-right align-right"><strong>{{$contact->business->name}}</strong>
+        	<br>
+        	@if(!empty($location))
+        		{!! $location->location_address !!}
+        	@else
+        		{!! $contact->business->business_address !!}
+        	@endif
+        </p>
 </div>
 <div class="col-md-6 col-sm-6 col-xs-6 @if(!empty($for_pdf)) width-50 f-left @endif">
 	<p class="blue-heading p-4 width-50">@lang('lang_v1.to'):</p>
@@ -58,9 +65,10 @@
 				<th width="8%" class="text-center">@lang('lang_v1.type')</th>
 				<th width="10%" class="text-center">@lang('sale.location')</th>
 				<th width="5%" class="text-center">@lang('sale.payment_status')</th>
-				<th width="10%" class="text-center">@lang('sale.total')</th>
+				{{--<th width="10%" class="text-center">@lang('sale.total')</th>--}}
 				<th width="10%" class="text-center">@lang('account.debit')</th>
 				<th width="10%" class="text-center">@lang('account.credit')</th>
+				<th width="10%" class="text-center">@lang('lang_v1.balance')</th>
 				<th width="5%" class="text-center">@lang('lang_v1.payment_method')</th>
 				<th width="15%" class="text-center">@lang('report.others')</th>
 			</tr>
@@ -73,9 +81,10 @@
 					<td>{{$data['type']}}</td>
 					<td>{{$data['location']}}</td>
 					<td>{{$data['payment_status']}}</td>
-					<td class="ws-nowrap align-right">@if($data['total'] !== '') @format_currency($data['total']) @endif</td>
+					{{--<td class="ws-nowrap align-right">@if($data['total'] !== '') @format_currency($data['total']) @endif</td>--}}
 					<td class="ws-nowrap align-right">@if($data['debit'] != '') @format_currency($data['debit']) @endif</td>
 					<td class="ws-nowrap align-right">@if($data['credit'] != '') @format_currency($data['credit']) @endif</td>
+					<td class="ws-nowrap align-right">{{$data['balance']}}</td>
 					<td>{{$data['payment_method']}}</td>
 					<td>{!! $data['others'] !!}</td>
 				</tr>

@@ -123,7 +123,7 @@ class ImportProductsController extends Controller
                 foreach ($imported_data as $key => $value) {
 
                     //Check if any column is missing
-                    if (count($value) < 36) {
+                    if (count($value) < 37) {
                         $is_valid =  false;
                         $error_msg = "Some of the columns are missing. Please, use latest CSV file template.";
                         break;
@@ -145,39 +145,50 @@ class ImportProductsController extends Controller
                     }
                     
                     //image name
-                    $image_name = trim($value[28]);
+                    $image_name = trim($value[29]);
                     if (!empty($image_name)) {
-                        $product_array['image'] = $image_name;
+                        if (filter_var($image_name, FILTER_VALIDATE_URL)) { 
+                            $source_image = file_get_contents($image_name);
+
+                            $path = parse_url($image_name, PHP_URL_PATH);
+                            $new_name = time() . '_' . basename($path);
+                            $dest_img = public_path() . '/uploads/' . config('constants.product_img_path') . '/' . $new_name;
+                            file_put_contents($dest_img, $source_image);
+                          $product_array['image'] = $new_name;
+                        } else {
+                            $product_array['image'] = $image_name;
+                        }
+                        
                     } else {
                         $product_array['image'] = '';
                     }
 
-                    $product_array['product_description'] = isset($value[29]) ? $value[29] : null;
+                    $product_array['product_description'] = isset($value[30]) ? $value[30] : null;
 
                     //Custom fields
-                    if (isset($value[30])) {
-                        $product_array['product_custom_field1'] = trim($value[30]);
+                    if (isset($value[31])) {
+                        $product_array['product_custom_field1'] = trim($value[31]);
                     } else {
                         $product_array['product_custom_field1'] = '';
                     }
-                    if (isset($value[31])) {
-                        $product_array['product_custom_field2'] = trim($value[31]);
+                    if (isset($value[32])) {
+                        $product_array['product_custom_field2'] = trim($value[32]);
                     } else {
                         $product_array['product_custom_field2'] = '';
                     }
-                    if (isset($value[32])) {
-                        $product_array['product_custom_field3'] = trim($value[32]);
+                    if (isset($value[33])) {
+                        $product_array['product_custom_field3'] = trim($value[33]);
                     } else {
                         $product_array['product_custom_field3'] = '';
                     }
-                    if (isset($value[33])) {
-                        $product_array['product_custom_field4'] = trim($value[33]);
+                    if (isset($value[34])) {
+                        $product_array['product_custom_field4'] = trim($value[34]);
                     } else {
                         $product_array['product_custom_field4'] = '';
                     }
 
                     //Add not for selling
-                    $product_array['not_for_selling'] = !empty($value[34]) && $value[34] == 1 ? 1 : 0;
+                    $product_array['not_for_selling'] = !empty($value[35]) && $value[35] == 1 ? 1 : 0;
 
                     //Add enable stock
                     $enable_stock = trim($value[7]);
@@ -322,14 +333,14 @@ class ImportProductsController extends Controller
                         $product_array['expiry_period_type'] = $expiry_period_type;
                     } else {
                         //If Expiry Date is set then make expiry_period 12 months.
-                        if (!empty($value[22])) {
+                        if (!empty($value[23])) {
                             $product_array['expiry_period'] = 12;
                             $product_array['expiry_period_type'] = 'months';
                         }
                     }
 
                     //Enable IMEI or Serial Number
-                    $enable_sr_no = trim($value[23]);
+                    $enable_sr_no = trim($value[24]);
                     if (in_array($enable_sr_no, [0,1])) {
                         $product_array['enable_sr_no'] = $enable_sr_no;
                     } elseif (empty($enable_sr_no)) {
@@ -341,25 +352,25 @@ class ImportProductsController extends Controller
                     }
 
                     //Weight
-                    if (isset($value[24])) {
-                        $product_array['weight'] = trim($value[24]);
+                    if (isset($value[25])) {
+                        $product_array['weight'] = trim($value[25]);
                     } else {
                         $product_array['weight'] = '';
                     }
 
                     if ($product_array['type'] == 'single') {
                         //Calculate profit margin
-                        $profit_margin = trim($value[18]);
+                        $profit_margin = trim($value[19]);
                         if (empty($profit_margin)) {
                             $profit_margin = $default_profit_percent;
                         } else {
-                            $profit_margin = trim($value[18]);
+                            $profit_margin = trim($value[19]);
                         }
                         $product_array['variation']['profit_percent'] = $profit_margin;
 
                         //Calculate purchase price
-                        $dpp_inc_tax = trim($value[16]);
-                        $dpp_exc_tax = trim($value[17]);
+                        $dpp_inc_tax = trim($value[17]);
+                        $dpp_exc_tax = trim($value[18]);
                         if ($dpp_inc_tax == '' && $dpp_exc_tax == '') {
                             $is_valid = false;
                             $error_msg = "PURCHASE PRICE is required in row no. $row_no";
@@ -370,7 +381,7 @@ class ImportProductsController extends Controller
                         }
 
                         //Calculate Selling price
-                        $selling_price = !empty(trim($value[19])) ? trim($value[19]) : 0 ;
+                        $selling_price = !empty(trim($value[20])) ? trim($value[20]) : 0 ;
 
                         //Calculate product prices
                         $product_prices = $this->calculateVariationPrices($dpp_exc_tax, $dpp_inc_tax, $selling_price, $tax_amount, $tax_type, $profit_margin);
@@ -382,11 +393,11 @@ class ImportProductsController extends Controller
                         $product_array['variation']['dsp_exc_tax'] = $product_prices['dsp_exc_tax'];
                         
                         //Opening stock
-                        if (!empty($value[20]) && $enable_stock == 1) {
-                            $product_array['opening_stock_details']['quantity'] = trim($value[20]);
+                        if (!empty($value[21]) && $enable_stock == 1) {
+                            $product_array['opening_stock_details']['quantity'] = trim($value[21]);
 
-                            if (!empty(trim($value[21]))) {
-                                $location_name = trim($value[21]);
+                            if (!empty(trim($value[22]))) {
+                                $location_name = trim($value[22]);
                                 $location = BusinessLocation::where('name', $location_name)
                                                             ->where('business_id', $business_id)
                                                             ->first();
@@ -405,8 +416,8 @@ class ImportProductsController extends Controller
                             $product_array['opening_stock_details']['expiry_date'] = null;
 
                             //Stock expiry date
-                            if (!empty($value[22])) {
-                                $product_array['opening_stock_details']['exp_date'] = \Carbon::createFromFormat('m-d-Y', trim($value[22]))->format('Y-m-d');
+                            if (!empty($value[23])) {
+                                $product_array['opening_stock_details']['exp_date'] = \Carbon::createFromFormat('m-d-Y', trim($value[23]))->format('Y-m-d');
                             } else {
                                 $product_array['opening_stock_details']['exp_date'] = null;
                             }
@@ -425,10 +436,12 @@ class ImportProductsController extends Controller
                             break;
                         }
 
-                        $dpp_inc_tax_string = trim($value[16]);
-                        $dpp_exc_tax_string = trim($value[17]);
-                        $selling_price_string = trim($value[19]);
-                        $profit_margin_string = trim($value[18]);
+                        $variation_sku_string = trim($value[16]);
+
+                        $dpp_inc_tax_string = trim($value[17]);
+                        $dpp_exc_tax_string = trim($value[18]);
+                        $selling_price_string = trim($value[20]);
+                        $profit_margin_string = trim($value[19]);
 
                         if (empty($dpp_inc_tax_string) && empty($dpp_exc_tax_string)) {
                             $is_valid = false;
@@ -441,6 +454,14 @@ class ImportProductsController extends Controller
                             '|',
                             $variation_values_string
                         ));
+
+                        $variation_skus = [];
+                        if (!empty($variation_sku_string)) {
+                            $variation_skus = array_map('trim', explode(
+                            '|',
+                                $variation_sku_string
+                            ));
+                        }
 
                         //Map Purchase price with variation values
                         $dpp_inc_tax = [];
@@ -495,6 +516,10 @@ class ImportProductsController extends Controller
 
                         //Check if length of prices array is equal to variation values array length
                         $array_lengths_count = [count($variation_values), count($dpp_inc_tax), count($dpp_exc_tax), count($selling_price), count($profit_margin)];
+
+                        if (!empty($variation_skus)) {
+                            $array_lengths_count[] = count($variation_skus);
+                        }
                         $same = array_count_values($array_lengths_count);
 
                         if (count($same) != 1) {
@@ -531,13 +556,14 @@ class ImportProductsController extends Controller
                                 'dpp_inc_tax' => $variation_prices['dpp_inc_tax'],
                                 'profit_percent' => $this->productUtil->num_f($profit_margin[$k]),
                                 'default_sell_price' => $variation_prices['dsp_exc_tax'],
-                                'sell_price_inc_tax' => $variation_prices['dsp_inc_tax']
+                                'sell_price_inc_tax' => $variation_prices['dsp_inc_tax'],
+                                'sub_sku' => !empty($variation_skus[$k]) ? $variation_skus[$k] : ''
                             ];
                         }
 
                         //Opening stock
-                        if (!empty($value[20]) && $enable_stock == 1) {
-                            $variation_os = array_map('trim', explode('|', $value[20]));
+                        if (!empty($value[21]) && $enable_stock == 1) {
+                            $variation_os = array_map('trim', explode('|', $value[21]));
 
                             //$product_array['opening_stock_details']['quantity'] = $variation_os;
 
@@ -548,8 +574,8 @@ class ImportProductsController extends Controller
                                 break;
                             }
 
-                            if (!empty(trim($value[21]))) {
-                                $location_name = trim($value[21]);
+                            if (!empty(trim($value[22]))) {
+                                $location_name = trim($value[22]);
                                 $location = BusinessLocation::where('name', $location_name)
                                                             ->where('business_id', $business_id)
                                                             ->first();
@@ -567,8 +593,8 @@ class ImportProductsController extends Controller
                                 $product_array['variation']['variations'][$k]['opening_stock'] = $v;
                                 $product_array['variation']['variations'][$k]['opening_stock_exp_date'] = null;
                                 
-                                if (!empty($value[22])) {
-                                    $product_array['variation']['variations'][$k]['opening_stock_exp_date'] = \Carbon::createFromFormat('m-d-Y', trim($value[22]))->format('Y-m-d');
+                                if (!empty($value[23])) {
+                                    $product_array['variation']['variations'][$k]['opening_stock_exp_date'] = \Carbon::createFromFormat('m-d-Y', trim($value[23]))->format('Y-m-d');
                                 } else {
                                     $product_array['variation']['variations'][$k]['opening_stock_exp_date'] = null;
                                 }
@@ -607,17 +633,17 @@ class ImportProductsController extends Controller
 
                         //Rack, Row & Position.
                         $this->rackDetails(
-                            $imported_data[$index][25],
                             $imported_data[$index][26],
                             $imported_data[$index][27],
+                            $imported_data[$index][28],
                             $business_id,
                             $product->id,
                             $index+1
                         );
 
                         //Product locations
-                        if (!empty($imported_data[$index][35])) {
-                            $locations_array = explode(',', $imported_data[$index][35]);
+                        if (!empty($imported_data[$index][36])) {
+                            $locations_array = explode(',', $imported_data[$index][36]);
                             $location_ids = [];
                             foreach ($locations_array as $business_location) {
                                 foreach ($business_locations as $loc) {
@@ -653,7 +679,7 @@ class ImportProductsController extends Controller
                                 $business_id
                             );
 
-                            if (!empty($value[20]) && $enable_stock == 1) {
+                            if (!empty($variation_data['opening_stock_location']) && $enable_stock == 1) {
                                 $this->addOpeningStockForVariable($variation_data, $product, $business_id);
                             }
                         }

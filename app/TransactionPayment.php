@@ -85,8 +85,9 @@ class TransactionPayment extends Model
 
         $payment->delete();
 
+        $transactionUtil = new \App\Utils\TransactionUtil();
+
         if(!empty($payment->transaction_id)) {
-            $transactionUtil = new \App\Utils\TransactionUtil();
             //update payment status
             $transaction = $payment->load('transaction')->transaction;
             $transaction_before = $transaction->replicate();
@@ -97,6 +98,12 @@ class TransactionPayment extends Model
             
             $transactionUtil->activityLog($transaction, 'payment_edited', $transaction_before);
         }
+
+        $log_properities = [
+            'id' => $payment->id,
+            'ref_no' => $payment->payment_ref_no
+        ];
+        $transactionUtil->activityLog($payment, 'payment_deleted', null, $log_properities);
 
         //Add event to delete account transaction
         event(new TransactionPaymentDeleted($payment));

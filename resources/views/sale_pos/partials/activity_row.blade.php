@@ -71,4 +71,29 @@
         <tr><td colspan="2">{{$update_note}}</td></tr>
     @endif
 @endif
+@if(!empty($activity->getExtraProperty('from')) && !empty($activity->getExtraProperty('to')))
+    <tr>
+        <td colspan="2">
+            @if($activity->getExtraProperty('from') != 'completed')
+                <span class="label {{$status_color_in_activity[$activity->getExtraProperty('from')]['class']}}" >
+                    {{$status_color_in_activity[$activity->getExtraProperty('from')]['label']}}
+                </span>
+            @else
+                <span class="label {{$status_color_in_activity[$activity->getExtraProperty('from')]['class']}}" >
+                    {{$status_color_in_activity[$activity->getExtraProperty('from')]['label']}}
+                </span>
+            @endif
+                &nbsp; -->
+            @if($activity->getExtraProperty('to') != 'completed')
+                <span class="label {{$status_color_in_activity[$activity->getExtraProperty('to')]['class']}}" >
+                    {{$status_color_in_activity[$activity->getExtraProperty('to')]['label']}}
+                </span>
+            @else
+                <span class="label {{$status_color_in_activity[$activity->getExtraProperty('to')]['class']}}" >
+                    {{$status_color_in_activity[$activity->getExtraProperty('to')]['label']}}
+                </span>
+            @endif
+        </td>
+    </tr>
+@endif
 </table>

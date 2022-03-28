@@ -1,4 +1,4 @@
-<div class="row">
+<div class="row pos_form_totals">
 	<div class="col-md-12">
 		<table class="table table-condensed">
 			<tr>
@@ -19,9 +19,14 @@
 						@if($is_rp_enabled)
 							{{session('business.rp_name')}}
 						@endif
-						(-):
-						<i class="fas fa-edit cursor-pointer" id="pos-edit-discount" title="@lang('sale.edit_discount')" aria-hidden="true" data-toggle="modal" data-target="#posEditDiscountModal"></i>
+						@if($is_discount_enabled)
+							(-):
+							@if($edit_discount)
+							<i class="fas fa-edit cursor-pointer" id="pos-edit-discount" title="@lang('sale.edit_discount')" aria-hidden="true" data-toggle="modal" data-target="#posEditDiscountModal"></i>
+							@endif
+						
 							<span id="total_discount">0</span>
+						@endif
 							<input type="hidden" name="discount_type" id="discount_type" value="@if(empty($edit)){{'percentage'}}@else{{$transaction->discount_type}}@endif" data-default="percentage">
 
 							<input type="hidden" name="discount_amount" id="discount_amount" value="@if(empty($edit)) {{@num_format($business_details->default_sales_discount)}} @else {{@num_format($transaction->discount_amount)}} @endif" data-default="{{$business_details->default_sales_discount}}">
@@ -55,7 +60,7 @@
 
 					</span>
 				</td>
-				<td class="@if($pos_settings['disable_discount'] != 0) hide @endif">
+				<td>
 					<span>
 
 						<b>@lang('sale.shipping')(+): @show_tooltip(__('tooltip.shipping'))</b> 

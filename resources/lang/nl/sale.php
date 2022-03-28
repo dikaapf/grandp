@@ -56,4 +56,7 @@
 "sale_date" => "Verkoopdatum",
 "list_pos" => "Lijst POS",
 "edit_sale" => "Verkoop bewerken",
+"shipping"=>"Verzending",
+"shipping_details"=>"Verzendgegevens",
+"shipping_charges"=>"Verzendkosten",
 ];

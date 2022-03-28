@@ -21,7 +21,7 @@
 		<div class="col-md-12">
 			<div class="row">
 				<div class="@if(empty($pos_settings['hide_product_suggestion'])) col-md-7 @else col-md-10 col-md-offset-1 @endif no-padding pr-12">
-					<div class="box box-solid mb-12">
+					<div class="box box-solid mb-12 @if(!isMobile()) mb-40 @endif">
 						<div class="box-body pb-0">
 							{!! Form::hidden('location_id', $transaction->location_id, ['id' => 'location_id', 'data-receipt_printer_type' => !empty($location_printer_type) ? $location_printer_type : 'browser', 'data-default_payment_accounts' => $transaction->location->default_payment_accounts]); !!}
 							<!-- sub_type -->

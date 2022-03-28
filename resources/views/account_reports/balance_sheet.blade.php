@@ -13,7 +13,14 @@
 <section class="content">
     <div class="row no-print">
         <div class="col-sm-12">
-            <div class="col-sm-3 col-xs-6 pull-right">
+            @component('components.filters', ['title' => __('report.filters')])
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('bal_sheet_location_id',  __('purchase.business_location') . ':') !!}
+                    {!! Form::select('bal_sheet_location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+                </div>
+            </div>
+            <div class="col-sm-3 col-xs-6">
                     <label for="end_date">@lang('messages.filter_by_date'):</label>
                     <div class="input-group">
                         <span class="input-group-addon">
@@ -22,6 +29,7 @@
                         <input type="text" id="end_date" value="{{@format_date('now')}}" class="form-control" readonly>
                     </div>
             </div>
+            @endcomponent
         </div>
     </div>
     <br>
@@ -148,6 +156,9 @@
             update_balance_sheet();
             $('#hidden_date').text($(this).val());
         });
+        $('#bal_sheet_location_id').change( function() {
+            update_balance_sheet();
+        });
     });
 
     function update_balance_sheet(){
@@ -160,8 +171,9 @@
         $('table#assets_table tbody#capital_account_balances').html('<tr><td colspan="2"><i class="fas fa-sync fa-spin fa-fw"></i></td></tr>');
 
         var end_date = $('input#end_date').val();
+        var location_id = $('#bal_sheet_location_id').val()
         $.ajax({
-            url: "{{action('AccountReportsController@balanceSheet')}}?end_date=" + end_date,
+            url: "{{action('AccountReportsController@balanceSheet')}}?end_date=" + end_date + '&location_id=' + location_id, 
             dataType: "json",
             success: function(result){
                 $('span#supplier_due').text(__currency_trans_from_en(result.supplier_due, true));

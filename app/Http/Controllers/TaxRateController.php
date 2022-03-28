@@ -60,6 +60,7 @@ class TaxRateController extends Controller
                     @endcan'
                 )
                 ->editColumn('name', '@if($for_tax_group == 1) {{$name}} <small>(@lang("lang_v1.for_tax_group_only"))</small> @else {{$name}} @endif')
+                ->editColumn('amount', '{{@num_format($amount)}}')
                 ->removeColumn('for_tax_group')
                 ->removeColumn('id')
                 ->rawColumns([0, 2])

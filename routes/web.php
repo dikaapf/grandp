@@ -29,6 +29,11 @@ Route::middleware(['setData'])->group(function () {
         ->name('show_invoice');
     Route::get('/quote/{token}', 'SellPosController@showInvoice')
         ->name('show_quote');
+
+    Route::get('/pay/{token}', 'SellPosController@invoicePayment')
+        ->name('invoice_payment');
+    Route::post('/confirm-payment/{id}', 'SellPosController@confirmPayment')
+        ->name('confirm_payment');
 });
 
 //Routes for authenticated users only
@@ -57,6 +62,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     Route::resource('units', 'UnitController');
 
+    Route::post('check-mobile', 'ContactController@checkMobile');
+    Route::get('/get-contact-due/{contact_id}', 'ContactController@getContactDue');
     Route::get('/contacts/payments/{contact_id}', 'ContactController@getContactPayments');
     Route::get('/contacts/map', 'ContactController@contactMap');
     Route::get('/contacts/update-status/{id}', 'ContactController@updateStatus');
@@ -65,7 +72,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/contacts/send-ledger', 'ContactController@sendLedger');
     Route::get('/contacts/import', 'ContactController@getImportContacts')->name('contacts.import');
     Route::post('/contacts/import', 'ContactController@postImportContacts');
-    Route::post('/contacts/check-contact-id', 'ContactController@checkContactId');
+    Route::post('/contacts/check-contacts-id', 'ContactController@checkContactId');
     Route::get('/contacts/customers', 'ContactController@getCustomers');
     Route::resource('contacts', 'ContactController');
 
@@ -100,9 +107,11 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/products/quick_add', 'ProductController@quickAdd');
     Route::post('/products/save_quick_product', 'ProductController@saveQuickProduct');
     Route::get('/products/get-combo-product-entry-row', 'ProductController@getComboProductEntryRow');
+    Route::post('/products/toggle-woocommerce-sync', 'ProductController@toggleWooCommerceSync');
     
     Route::resource('products', 'ProductController');
 
+    Route::post('/import-purchase-products', 'PurchaseController@importPurchaseProducts');
     Route::post('/purchases/update-status', 'PurchaseController@updateStatus');
     Route::get('/purchases/get_products', 'PurchaseController@getProducts');
     Route::get('/purchases/get_suppliers', 'PurchaseController@getSuppliers');
@@ -132,6 +141,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/sells/pos/get-recent-transactions', 'SellPosController@getRecentTransactions');
     Route::get('/sells/pos/get-product-suggestion', 'SellPosController@getProductSuggestion');
     Route::get('/sells/pos/get-featured-products/{location_id}', 'SellPosController@getFeaturedProducts');
+    Route::get('/reset-mapping', 'SellController@resetMapping');
+
     Route::resource('pos', 'SellPosController');
 
     Route::resource('roles', 'RoleController');
@@ -153,6 +164,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('/labels/preview', 'LabelsController@preview');
 
     //Reports...
+    Route::get('/reports/get-stock-by-sell-price', 'ReportController@getStockBySellingPrice');
     Route::get('/reports/purchase-report', 'ReportController@purchaseReport');
     Route::get('/reports/sale-report', 'ReportController@saleReport');
     Route::get('/reports/service-staff-report', 'ReportController@getServiceStaffReport');
@@ -179,6 +191,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::post('/reports/stock-expiry-update', 'ReportController@updateStockExpiryReport')->name('updateStockExpiryReport');
     Route::get('/reports/customer-group', 'ReportController@getCustomerGroup');
     Route::get('/reports/product-purchase-report', 'ReportController@getproductPurchaseReport');
+    Route::get('/reports/product-sell-grouped-by', 'ReportController@productSellReportBy');
     Route::get('/reports/product-sell-report', 'ReportController@getproductSellReport');
     Route::get('/reports/product-sell-report-with-purchase', 'ReportController@getproductSellReportWithPurchase');
     Route::get('/reports/product-sell-grouped-report', 'ReportController@getproductSellGroupedReport');
@@ -205,6 +218,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
 
     //Invoice layouts..
     Route::resource('invoice-layouts', 'InvoiceLayoutController');
+
+    Route::post('get-expense-sub-categories', 'ExpenseCategoryController@getSubCategories');
 
     //Expense Categories...
     Route::resource('expense-categories', 'ExpenseCategoryController');
@@ -299,6 +314,8 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::get('/close/{id}', 'AccountController@close');
         Route::get('/activate/{id}', 'AccountController@activate');
         Route::get('/delete-account-transaction/{id}', 'AccountController@destroyAccountTransaction');
+        Route::get('/edit-account-transaction/{id}', 'AccountController@editAccountTransaction');
+        Route::post('/update-account-transaction/{id}', 'AccountController@updateAccountTransaction');
         Route::get('/get-account-balance/{id}', 'AccountController@getAccountBalance');
         Route::get('/balance-sheet', 'AccountReportsController@balanceSheet');
         Route::get('/trial-balance', 'AccountReportsController@trialBalance');
@@ -331,6 +348,7 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
         Route::get('/orders/mark-as-served/{id}', 'Restaurant\OrderController@markAsServed');
         Route::get('/data/get-pos-details', 'Restaurant\DataController@getPosDetails');
         Route::get('/orders/mark-line-order-as-served/{id}', 'Restaurant\OrderController@markLineOrderAsServed');
+        Route::get('/print-line-order', 'Restaurant\OrderController@printLineOrder');
     });
 
     Route::get('bookings/get-todays-bookings', 'Restaurant\BookingController@getTodaysBookings');
@@ -355,6 +373,18 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone', 
     Route::get('get-document-note-page', 'DocumentAndNoteController@getDocAndNoteIndexPage');
     Route::post('post-document-upload', 'DocumentAndNoteController@postMedia');
     Route::resource('note-documents', 'DocumentAndNoteController');
+    Route::resource('purchase-order', 'PurchaseOrderController');
+    Route::get('get-purchase-orders/{contact_id}', 'PurchaseOrderController@getPurchaseOrders');
+    Route::get('get-purchase-order-lines/{purchase_order_id}', 'PurchaseController@getPurchaseOrderLines');
+    Route::get('edit-purchase-orders/{id}/status', 'PurchaseOrderController@getEditPurchaseOrderStatus');
+    Route::put('update-purchase-orders/{id}/status', 'PurchaseOrderController@postEditPurchaseOrderStatus');
+    Route::resource('sales-order', 'SalesOrderController')->only(['index']);
+    Route::get('get-sales-orders/{customer_id}', 'SalesOrderController@getSalesOrders');
+    Route::get('get-sales-order-lines', 'SellPosController@getSalesOrderLines');
+    Route::get('edit-sales-orders/{id}/status', 'SalesOrderController@getEditSalesOrderStatus');
+    Route::put('update-sales-orders/{id}/status', 'SalesOrderController@postEditSalesOrderStatus');
+    Route::get('reports/activity-log', 'ReportController@activityLog');
+    Route::get('user-location/{latlng}', 'HomeController@getUserLocation');
 });
 
 
@@ -378,8 +408,14 @@ Route::middleware(['setData', 'auth', 'SetSessionData', 'language', 'timezone'])
     Route::get('/get-total-unread', 'HomeController@getTotalUnreadNotifications');
     Route::get('/purchases/print/{id}', 'PurchaseController@printInvoice');
     Route::get('/purchases/{id}', 'PurchaseController@show');
+    Route::get('/download-purchase-order/{id}/pdf', 'PurchaseOrderController@downloadPdf')->name('purchaseOrder.downloadPdf');
     Route::get('/sells/{id}', 'SellController@show');
     Route::get('/sells/{transaction_id}/print', 'SellPosController@printInvoice')->name('sell.printInvoice');
+    Route::get('/download-sells/{transaction_id}/pdf', 'SellPosController@downloadPdf')->name('sell.downloadPdf');
+    Route::get('/download-quotation/{id}/pdf', 'SellPosController@downloadQuotationPdf')
+        ->name('quotation.downloadPdf');
+    Route::get('/download-packing-list/{id}/pdf', 'SellPosController@downloadPackingListPdf')
+        ->name('packing.downloadPdf');
     Route::get('/sells/invoice-url/{id}', 'SellPosController@showInvoiceUrl');
     Route::get('/show-notification/{id}', 'HomeController@showNotification');
 });

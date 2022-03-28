@@ -61,6 +61,7 @@
             @endcomponent
         </div>
     </div>
+    @can('view_product_stock_value')
     <div class="row">
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-solid'])
@@ -81,6 +82,7 @@
             @endcomponent
         </div>
     </div>
+    @endcan
     <div class="row">
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-solid'])

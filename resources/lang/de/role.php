@@ -63,7 +63,6 @@
 "brand" => "Brand",
 "tax_rate" => "Norma e tatimit",
 "unit" => "Unit",
-"expense.access" => "Shpenzimet e hyrjes",
 "access_locations" => "Vendet e hyrjes",
 "all_locations" => "Të gjitha vendndodhjet",
 "dashboard" => "Home",

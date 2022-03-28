@@ -31,7 +31,7 @@
 		</div>
 
 		<div class="row">
-			<div class="col-sm-8 col-sm-offset-2">
+			<div class="col-sm-10 col-sm-offset-2">
 				<table class="table table-bordered table-striped table-condensed" id="product_table">
 					<thead>
 						<tr>
@@ -44,6 +44,7 @@
 								<th>@lang( 'product.exp_date' )</th>
 							@endif
 							<th>@lang('lang_v1.packing_date')</th>
+							<th>@lang('lang_v1.selling_price_group')</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -56,75 +57,144 @@
 
 	@component('components.widget', ['class' => 'box-primary', 'title' => __( 'barcode.info_in_labels' )])
 		<div class="row">
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[name]" value="1"> <b>@lang( 'barcode.print_name' )</b>
-				    </label>
-				</div>
+			<div class="col-md-12">
+				<table class="table table-bordered">
+					<tr>
+						<td>
+							<div class="checkbox">
+							    <label>
+							    	<input type="checkbox" checked name="print[name]" value="1"> <b>@lang( 'barcode.print_name' )</b>
+							    </label>
+							</div>
+
+							<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+								<input type="text" class="form-control" 
+									name="print[name_size]" 
+									value="15">
+							</div>
+						</td>
+
+						<td>
+							<div class="checkbox">
+							    <label>
+							    	<input type="checkbox" checked name="print[variations]" value="1"> <b>@lang( 'barcode.print_variations' )</b>
+							    </label>
+							</div>
+
+							<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+								<input type="text" class="form-control" 
+									name="print[variations_size]" 
+									value="17">
+							</div>
+						</td>
+
+						<td>
+							<div class="checkbox">
+							    <label>
+							    	<input type="checkbox" checked name="print[price]" value="1" id="is_show_price"> <b>@lang( 'barcode.print_price' )</b>
+							    </label>
+							</div>
+
+							<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+								<input type="text" class="form-control" 
+									name="print[price_size]" 
+									value="17">
+							</div>
+
+						</td>
+
+						<td>
+							
+							<div class="" id="price_type_div">
+								<div class="form-group">
+									{!! Form::label('print[price_type]', @trans( 'barcode.show_price' ) . ':') !!}
+									<div class="input-group">
+										<span class="input-group-addon">
+											<i class="fa fa-info"></i>
+										</span>
+										{!! Form::select('print[price_type]', ['inclusive' => __('product.inc_of_tax'), 'exclusive' => __('product.exc_of_tax')], 'inclusive', ['class' => 'form-control']); !!}
+									</div>
+								</div>
+							</div>
+
+						</td>
+					</tr>
+
+					<tr>
+						<td>
+							<div class="checkbox">
+							    <label>
+							    	<input type="checkbox" checked name="print[business_name]" value="1"> <b>@lang( 'barcode.print_business_name' )</b>
+							    </label>
+							</div>
+
+							<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+								<input type="text" class="form-control" 
+									name="print[business_name_size]" 
+									value="20">
+							</div>
+						</td>
+
+						<td>
+							<div class="checkbox">
+							    <label>
+							    	<input type="checkbox" checked name="print[packing_date]" value="1"> <b>@lang( 'lang_v1.print_packing_date' )</b>
+							    </label>
+							</div>
+
+							<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+								<input type="text" class="form-control" 
+									name="print[packing_date_size]" 
+									value="12">
+							</div>
+						</td>
+
+						<td>
+							@if(request()->session()->get('business.enable_lot_number') == 1)
+							
+								<div class="checkbox">
+								    <label>
+								    	<input type="checkbox" checked name="print[lot_number]" value="1"> <b>@lang( 'lang_v1.print_lot_number' )</b>
+								    </label>
+								</div>
+
+								<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+									<input type="text" class="form-control" 
+										name="print[lot_number_size]" 
+										value="12">
+								</div>
+							@endif
+						</td>
+
+						<td>
+							@if(request()->session()->get('business.enable_product_expiry') == 1)
+								<div class="checkbox">
+								    <label>
+								    	<input type="checkbox" checked name="print[exp_date]" value="1"> <b>@lang( 'lang_v1.print_exp_date' )</b>
+								    </label>
+								</div>
+
+								<div class="input-group">
+      							<div class="input-group-addon"><b>@lang( 'lang_v1.size' )</b></div>
+									<input type="text" class="form-control" 
+										name="print[exp_date_size]" 
+										value="12">
+								</div>
+							@endif
+						</td>
+					</tr>
+				</table>
 			</div>
 
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[variations]" value="1"> <b>@lang( 'barcode.print_variations' )</b>
-				    </label>
-				</div>
-			</div>
+			
 
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[price]" value="1" id="is_show_price"> <b>@lang( 'barcode.print_price' )</b>
-				    </label>
-				</div>
-			</div>
-
-			<div class="col-sm-3" id="price_type_div">
-				<div class="form-group">
-					{!! Form::label('print[price_type]', @trans( 'barcode.show_price' ) . ':') !!}
-					<div class="input-group">
-						<span class="input-group-addon">
-							<i class="fa fa-info"></i>
-						</span>
-						{!! Form::select('print[price_type]', ['inclusive' => __('product.inc_of_tax'), 'exclusive' => __('product.exc_of_tax')], 'inclusive', ['class' => 'form-control']); !!}
-					</div>
-				</div>
-			</div>
-
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[business_name]" value="1"> <b>@lang( 'barcode.print_business_name' )</b>
-				    </label>
-				</div>
-			</div>
-			@if(request()->session()->get('business.enable_lot_number') == 1)
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[lot_number]" value="1"> <b>@lang( 'lang_v1.print_lot_number' )</b>
-				    </label>
-				</div>
-			</div>
-			@endif
-			@if(request()->session()->get('business.enable_product_expiry') == 1)
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[exp_date]" value="1"> <b>@lang( 'lang_v1.print_exp_date' )</b>
-				    </label>
-				</div>
-			</div>
-			@endif
-
-			<div class="col-sm-3">
-				<div class="checkbox">
-				    <label>
-				    	<input type="checkbox" checked name="print[packing_date]" value="1"> <b>@lang( 'lang_v1.print_packing_date' )</b>
-				    </label>
-				</div>
-			</div>
+			
 
 			<div class="col-sm-12">
 				<hr/>
@@ -137,7 +207,7 @@
 						<span class="input-group-addon">
 							<i class="fa fa-cog"></i>
 						</span>
-						{!! Form::select('barcode_setting', $barcode_settings, null, ['class' => 'form-control']); !!}
+						{!! Form::select('barcode_setting', $barcode_settings, !empty($default) ? $default->id : null, ['class' => 'form-control']); !!}
 					</div>
 				</div>
 			</div>

@@ -22,7 +22,7 @@
           <div class="col-sm-4">
             <div class="form-group">
               <div class="option-div  @if($invoice->scheme_type == 'year') {{ 'active'}} @endif">
-                <h4>FORMAT: <br>{{ date('Y') }}-XXXX <i class="fa fa-check-circle pull-right icon"></i></h4>
+                <h4>FORMAT: <br>{{ date('Y') }}{{config('constants.invoice_scheme_separator')}}XXXX <i class="fa fa-check-circle pull-right icon"></i></h4>
                 <input type="radio" name="scheme_type" value="year" @if($invoice->scheme_type == 'year') {{ 'checked'}} @endif>
               </div>
             </div>
@@ -48,15 +48,7 @@
               <span class="input-group-addon">
                   <i class="fa fa-info"></i>
               </span>
-                @php
-                  $disabled = '';
-                  $prefix = $invoice->prefix;
-                  if( $invoice->scheme_type == 'year'){
-                    $prefix = date('Y') . '-';
-                    $disabled = 'disabled';
-                  }
-                @endphp
-                {!! Form::text('prefix', $prefix, ['class' => 'form-control', 'placeholder' => '', $disabled]); !!}
+                {!! Form::text('prefix', $invoice->prefix, ['class' => 'form-control', 'placeholder' => '']); !!}
             </div>
           </div>
         </div>

@@ -15,13 +15,14 @@
                 <div class="col-md-12">
                     @if(!empty($value['extra_tags']))
                         <strong>@lang('lang_v1.available_tags'):</strong>
-                    <p class="text-primary">{{implode(', ', $value['extra_tags'])}}</p>
+                        @include('notification_template.partials.tags', ['tags' => $value['extra_tags']])
+                    
                     @endif
                     @if(!empty($value['help_text']))
                     <p class="help-block">{{$value['help_text']}}</p>
                     @endif
                 </div>
-                <div class="col-md-12">
+                <div class="col-md-12 mt-10">
                     <div class="form-group">
                         {!! Form::label($key . '_subject',
                         __('lang_v1.email_subject').':') !!}
@@ -75,8 +76,8 @@
                         , 'placeholder' => __('lang_v1.whatsapp_text'), 'id' => $key . '_whatsapp_text', 'rows' => 6]); !!}
                     </div>
                 </div>
-                @if($key == 'new_sale')
-                    <div class="col-md-12">
+                @if($key == 'new_sale' || $key == 'payment_reminder')
+                    <div class="col-md-12 mt-15">
                         <div class="form-group">
                             <label class="checkbox-inline">
                                 {!! Form::checkbox('template_data[' . $key . '][auto_send]', 1, $value['auto_send'], ['class' => 'input-icheck']); !!} @lang('lang_v1.autosend_email')
@@ -88,6 +89,12 @@
                                 {!! Form::checkbox('template_data[' . $key . '][auto_send_wa_notif]', 1, $value['auto_send_wa_notif'], ['class' => 'input-icheck']); !!} @lang('lang_v1.auto_send_wa_notif')
                             </label>
                         </div>
+                        @if($key == 'payment_reminder')
+                            <p class="help-block">@lang('lang_v1.payment_reminder_help')</p>
+
+                        @elseif($key == 'new_sale')
+                            <p class="help-block">@lang('lang_v1.new_sale_notification_help')</p>
+                        @endif
                     </div>
                 @endif
                 </div>

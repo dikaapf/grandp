@@ -8,7 +8,7 @@
                         $purchase_prefix = $business->ref_no_prefixes['purchase'];
                     }
                 @endphp
-                {!! Form::label('ref_no_prefixes[purchase]', __('lang_v1.purchase_order') . ':') !!}
+                {!! Form::label('ref_no_prefixes[purchase]', __('lang_v1.purchase') . ':') !!}
                 {!! Form::text('ref_no_prefixes[purchase]', $purchase_prefix, ['class' => 'form-control']); !!}
             </div>
         </div>
@@ -22,6 +22,15 @@
                 @endphp
                 {!! Form::label('ref_no_prefixes[purchase_return]', __('lang_v1.purchase_return') . ':') !!}
                 {!! Form::text('ref_no_prefixes[purchase_return]', $purchase_return, ['class' => 'form-control']); !!}
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                @php
+                    $purchase_order_prefix = !empty($business->ref_no_prefixes['purchase_order']) ? $business->ref_no_prefixes['purchase_order'] : '';
+                @endphp
+                {!! Form::label('ref_no_prefixes[purchase_order]', __('lang_v1.purchase_order') . ':') !!}
+                {!! Form::text('ref_no_prefixes[purchase_order]', $purchase_order_prefix, ['class' => 'form-control']); !!}
             </div>
         </div>
         <div class="col-sm-4">
@@ -157,6 +166,15 @@
                 @endphp
                 {!! Form::label('ref_no_prefixes[draft]', __('sale.draft') . ':') !!}
                 {!! Form::text('ref_no_prefixes[draft]', $draft_prefix, ['class' => 'form-control']); !!}
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                @php
+                    $sales_order_prefix = !empty($business->ref_no_prefixes['sales_order']) ? $business->ref_no_prefixes['sales_order'] : '';
+                @endphp
+                {!! Form::label('ref_no_prefixes[sales_order]', __('lang_v1.sales_order') . ':') !!}
+                {!! Form::text('ref_no_prefixes[sales_order]', $sales_order_prefix, ['class' => 'form-control']); !!}
             </div>
         </div>
     </div>

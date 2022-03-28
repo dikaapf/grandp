@@ -85,9 +85,10 @@ class Media extends Model
             return null;
         }
 
+        $uploaded_files = [];
+
         if ($request->hasFile($file_name)) {
             $files = $request->file($file_name);
-            $uploaded_files = [];
 
             //If multiple files present
             if (is_array($files)) {
@@ -104,7 +105,21 @@ class Media extends Model
                     $uploaded_files[] = $uploaded_file;
                 }
             }
+        }
 
+        //check if base64
+        if (!empty($request->$file_name) && !is_array($request->$file_name)) {
+
+            $base64_array = explode(',', $request->$file_name);
+
+            $base64_string = $base64_array[1] ?? $base64_array[0];
+
+            if (Media::is_base64($base64_string)) {
+                $uploaded_files[] = Media::uploadBase64Image($base64_string);
+            }
+        }
+
+        if (!empty($uploaded_files)) {
             //If one to one relationship upload single file
             if ($is_single) {
                 $uploaded_files = $uploaded_files[0];
@@ -112,6 +127,11 @@ class Media extends Model
             // attach media to model
             Media::attachMediaToModel($model, $business_id, $uploaded_files, $request, $model_media_type);
         }
+    }
+
+    public static function is_base64($s)
+    {
+          return (bool) preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $s);
     }
 
     /**
@@ -129,6 +149,23 @@ class Media extends Model
         }
 
         return $file_name;
+    }
+
+    public static function uploadBase64Image($base64_string) {
+
+        $file_name = time() . '_' . mt_rand() . '_media.jpg';
+
+        $output_file = public_path('uploads') . '/media/' . $file_name;
+
+        // open the output file for writing
+        $ifp = fopen( $output_file, 'wb' ); 
+
+        fwrite( $ifp, base64_decode( $base64_string ) );
+
+        // clean up the file resource
+        fclose( $ifp ); 
+
+        return $file_name; 
     }
 
     /**

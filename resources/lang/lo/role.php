@@ -86,7 +86,6 @@ return [
     'brand' => 'ຍີ່ຫໍ້',
     'tax_rate' => 'ອັດຕາອາກອນ',
     'unit' => 'ຫົວໜ່ວຍ',
-    'expense.access' => 'ການເຂົ້າເຖິງຄ່າໃຊ້ຈ່າຍ',
     'access_locations' =>'ເຂົ້າເຖິງສະຖານທີ່',
     'all_locations' => 'ສະຖານທີ່ທັງໝົດ',
     'dashboard' => 'ໜ້າທຳອິດ',

@@ -12,7 +12,7 @@
         <div class="col-sm-6 col-xs-6">
             <h4>@lang('lang_v1.purchase_return_details'):</h4>
             <strong>@lang('lang_v1.return_date'):</strong> {{@format_date($purchase->return_parent->transaction_date)}}<br>
-            <strong>@lang('purchase.supplier'):</strong> {{ $purchase->contact->name }} <br>
+            <strong>@lang('purchase.supplier'):</strong> {!! $purchase->contact->contact_address !!} <br>
             <strong>@lang('purchase.business_location'):</strong> {{ $purchase->location->name }}
         </div>
         <div class="col-sm-6 col-xs-6">
@@ -24,7 +24,7 @@
             <div class="col-sm-6 col-xs-6">
                 <h4>@lang('lang_v1.purchase_return_details'):</h4>
                 <strong>@lang('lang_v1.return_date'):</strong> {{@format_date($purchase->transaction_date)}}<br>
-                <strong>@lang('purchase.supplier'):</strong> {{ $purchase->contact->name ?? '' }} <br>
+                <strong>@lang('purchase.supplier'):</strong> {!! $purchase->contact->contact_address !!} <br>
                 <strong>@lang('purchase.business_location'):</strong> {{ $purchase->location->name }}
             </div>
         @endif

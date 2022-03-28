@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Str;
 use App\Contact;
+use App\Utils\CashRegisterUtil;
 
 class ExpenseController extends Controller
 {
@@ -26,12 +27,13 @@ class ExpenseController extends Controller
     * @param TransactionUtil $transactionUtil
     * @return void
     */
-    public function __construct(TransactionUtil $transactionUtil, ModuleUtil $moduleUtil)
+    public function __construct(TransactionUtil $transactionUtil, ModuleUtil $moduleUtil, CashRegisterUtil $cashRegisterUtil)
     {
         $this->transactionUtil = $transactionUtil;
         $this->moduleUtil = $moduleUtil;
         $this->dummyPaymentLine = ['method' => 'cash', 'amount' => 0, 'note' => '', 'card_transaction_number' => '', 'card_number' => '', 'card_type' => '', 'card_holder_name' => '', 'card_month' => '', 'card_year' => '', 'card_security' => '', 'cheque_number' => '', 'bank_account_number' => '',
         'is_return' => 0, 'transaction_no' => ''];
+        $this->cashRegisterUtil = $cashRegisterUtil;
     }
 
     /**
@@ -41,7 +43,7 @@ class ExpenseController extends Controller
      */
     public function index()
     {
-        if (!auth()->user()->can('expense.access') && !auth()->user()->can('view_own_expense')) {
+        if (!auth()->user()->can('all_expense.access') && !auth()->user()->can('view_own_expense')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -154,8 +156,12 @@ class ExpenseController extends Controller
             }
 
             $is_admin = $this->moduleUtil->is_admin(auth()->user(), $business_id);
-            if (!$is_admin && auth()->user()->can('view_own_expense')) {
-                $expenses->where('transactions.created_by', request()->session()->get('user.id'));
+            if (!$is_admin && !auth()->user()->can('all_expense.access')) {
+                $user_id = auth()->user()->id;
+                $expenses->where(function ($query) use ($user_id) {
+                        $query->where('transactions.created_by', $user_id)
+                        ->orWhere('transactions.expense_for', $user_id);
+                    });
             }
             
             return Datatables::of($expenses)
@@ -167,16 +173,20 @@ class ExpenseController extends Controller
                                 </span>
                         </button>
                     <ul class="dropdown-menu dropdown-menu-left" role="menu">
-                    <li><a href="{{action(\'ExpenseController@edit\', [$id])}}"><i class="glyphicon glyphicon-edit"></i> @lang("messages.edit")</a></li>
+                    @if(auth()->user()->can("expense.edit"))
+                        <li><a href="{{action(\'ExpenseController@edit\', [$id])}}"><i class="glyphicon glyphicon-edit"></i> @lang("messages.edit")</a></li>
+                    @endif
                     @if($document)
                         <li><a href="{{ url(\'uploads/documents/\' . $document)}}" 
                         download=""><i class="fa fa-download" aria-hidden="true"></i> @lang("purchase.download_document")</a></li>
                         @if(isFileImage($document))
-                            <li><a href="#" data-href="{{ url(\'uploads/documents/\' . $document)}}" class="view_uploaded_document"><i class="fa fa-picture-o" aria-hidden="true"></i>@lang("lang_v1.view_document")</a></li>
+                            <li><a href="#" data-href="{{ url(\'uploads/documents/\' . $document)}}" class="view_uploaded_document"><i class="fas fa-file-image" aria-hidden="true"></i>@lang("lang_v1.view_document")</a></li>
                         @endif
                     @endif
-                    <li>
+                    @if(auth()->user()->can("expense.delete"))
+                        <li>
                         <a href="#" data-href="{{action(\'ExpenseController@destroy\', [$id])}}" class="delete_expense"><i class="glyphicon glyphicon-trash"></i> @lang("messages.delete")</a></li>
+                    @endif
                     <li class="divider"></li> 
                     @if($payment_status != "paid")
                         <li><a href="{{action("TransactionPaymentController@addPayment", [$id])}}" class="add_payment_modal"><i class="fas fa-money-bill-alt" aria-hidden="true"></i> @lang("purchase.add_payment")</a></li>
@@ -187,13 +197,13 @@ class ExpenseController extends Controller
                 ->removeColumn('id')
                 ->editColumn(
                     'final_total',
-                    '<span class="display_currency final-total" data-currency_symbol="true" data-orig-value="@if($type=="expense_refund"){{-1 * $final_total}}@else{{$final_total}}@endif">@if($type=="expense_refund") - @endif{{$final_total}}</span>'
+                    '<span class="display_currency final-total" data-currency_symbol="true" data-orig-value="@if($type=="expense_refund"){{-1 * $final_total}}@else{{$final_total}}@endif">@if($type=="expense_refund") - @endif @format_currency($final_total)</span>'
                 )
                 ->editColumn('transaction_date', '{{@format_datetime($transaction_date)}}')
                 ->editColumn(
                     'payment_status',
-                    '<a href="{{ action("TransactionPaymentController@show", [$id])}}" class="view_payment_modal payment-status no-print" data-orig-value="{{$payment_status}}" data-status-name="{{__(\'lang_v1.\' . $payment_status)}}"><span class="label @payment_status($payment_status)">{{__(\'lang_v1.\' . $payment_status)}}
-                        </span></a><span class="print_section">{{__(\'lang_v1.\' . $payment_status)}}</span>'
+                    '<a href="{{ action("TransactionPaymentController@show", [$id])}}" class="view_payment_modal payment-status" data-orig-value="{{$payment_status}}" data-status-name="{{__(\'lang_v1.\' . $payment_status)}}"><span class="label @payment_status($payment_status)">{{__(\'lang_v1.\' . $payment_status)}}
+                        </span></a>'
                 )
                 ->addColumn('payment_due', function ($row) {
                     $due = $row->final_total - $row->amount_paid;
@@ -201,7 +211,7 @@ class ExpenseController extends Controller
                     if ($row->type == 'expense_refund') {
                         $due = -1 * $due;
                     }
-                    return '<span class="display_currency payment_due" data-currency_symbol="true" data-orig-value="' . $due . '">' . $due . '</span>';
+                    return '<span class="display_currency payment_due" data-currency_symbol="true" data-orig-value="' . $due . '">' . $this->transactionUtil->num_f($due, true) . '</span>';
                 })
                 ->addColumn('recur_details', function($row){
                     $details = '<small>';
@@ -246,6 +256,7 @@ class ExpenseController extends Controller
         $business_id = request()->session()->get('user.business_id');
 
         $categories = ExpenseCategory::where('business_id', $business_id)
+                            ->whereNull('parent_id')
                             ->pluck('name', 'id');
 
         $users = User::forDropdown($business_id, false, true, true);
@@ -265,7 +276,7 @@ class ExpenseController extends Controller
      */
     public function create()
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!auth()->user()->can('expense.add')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -282,6 +293,7 @@ class ExpenseController extends Controller
         $business_locations = $business_locations['locations'];
 
         $expense_categories = ExpenseCategory::where('business_id', $business_id)
+                                ->whereNull('parent_id')
                                 ->pluck('name', 'id');
         $users = User::forDropdown($business_id, true, true);
 
@@ -299,6 +311,11 @@ class ExpenseController extends Controller
             $accounts = Account::forDropdown($business_id, true, false, true);
         }
 
+        if (request()->ajax()) {
+            return view('expense.add_expense_modal')
+                ->with(compact('expense_categories', 'business_locations', 'users', 'taxes', 'payment_line', 'payment_types', 'accounts', 'bl_attributes', 'contacts'));
+        }
+
         return view('expense.create')
             ->with(compact('expense_categories', 'business_locations', 'users', 'taxes', 'payment_line', 'payment_types', 'accounts', 'bl_attributes', 'contacts'));
     }
@@ -311,7 +328,7 @@ class ExpenseController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!auth()->user()->can('expense.add')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -334,6 +351,11 @@ class ExpenseController extends Controller
             
             $expense = $this->transactionUtil->createExpense($request, $business_id, $user_id);
 
+            if (request()->ajax()) {
+                $payments = !empty($request->input('payment')) ? $request->input('payment') : [];
+                $this->cashRegisterUtil->addSellPayments($expense, $payments);
+            }
+
             $this->transactionUtil->activityLog($expense, 'added');
 
             DB::commit();
@@ -349,6 +371,10 @@ class ExpenseController extends Controller
             $output = ['success' => 0,
                             'msg' => __('messages.something_went_wrong')
                         ];
+        }
+
+        if (request()->ajax()) {
+            return $output;
         }
 
         return redirect('expenses')->with('status', $output);
@@ -373,7 +399,7 @@ class ExpenseController extends Controller
      */
     public function edit($id)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!auth()->user()->can('expense.edit')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -387,6 +413,7 @@ class ExpenseController extends Controller
         $business_locations = BusinessLocation::forDropdown($business_id);
 
         $expense_categories = ExpenseCategory::where('business_id', $business_id)
+                                ->whereNull('parent_id')
                                 ->pluck('name', 'id');
         $expense = Transaction::where('business_id', $business_id)
                                 ->where('id', $id)
@@ -398,8 +425,18 @@ class ExpenseController extends Controller
 
         $contacts = Contact::contactDropdown($business_id, false, false);
 
+        //Sub-category
+        $sub_categories = [];
+
+        if (!empty($expense->expense_category_id)) {
+            $sub_categories = ExpenseCategory::where('business_id', $business_id)
+                        ->where('parent_id', $expense->expense_category_id)
+                        ->pluck('name', 'id')
+                        ->toArray();
+        }
+        
         return view('expense.edit')
-            ->with(compact('expense', 'expense_categories', 'business_locations', 'users', 'taxes', 'contacts'));
+            ->with(compact('expense', 'expense_categories', 'business_locations', 'users', 'taxes', 'contacts', 'sub_categories'));
     }
 
     /**
@@ -411,7 +448,7 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!auth()->user()->can('expense.edit')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -454,7 +491,7 @@ class ExpenseController extends Controller
      */
     public function destroy($id)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!auth()->user()->can('expense.delete')) {
             abort(403, 'Unauthorized action.');
         }
 

@@ -356,7 +356,8 @@ class BusinessController extends Controller
                 'min_order_total_for_rp', 'max_rp_per_order',
                 'redeem_amount_per_unit_rp', 'min_order_total_for_redeem',
                 'min_redeem_point', 'max_redeem_point', 'rp_expiry_period',
-                'rp_expiry_type', 'custom_labels', 'weighing_scale_setting']);
+                'rp_expiry_type', 'custom_labels', 'weighing_scale_setting',
+                'code_label_1', 'code_1', 'code_label_2', 'code_2']);
 
             if (!empty($request->input('enable_rp')) &&  $request->input('enable_rp') == 1) {
                 $business_details['enable_rp'] = 1;

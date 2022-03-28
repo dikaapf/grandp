@@ -53,7 +53,8 @@ class BusinessLocation extends Model
                 'id',
                 'receipt_printer_type',
                 'selling_price_group_id',
-                'default_payment_accounts'
+                'default_payment_accounts',
+                'invoice_scheme_id'
             );
         }
 
@@ -77,7 +78,8 @@ class BusinessLocation extends Model
                 return [$item->id => [
                             'data-receipt_printer_type' => $item->receipt_printer_type,
                             'data-default_price_group' => !empty($item->selling_price_group_id) && array_key_exists($item->selling_price_group_id, $price_groups) ? $item->selling_price_group_id : null,
-                            'data-default_payment_accounts' => json_encode($default_payment_accounts)
+                            'data-default_payment_accounts' => json_encode($default_payment_accounts),
+                            'data-default_invoice_scheme_id' => $item->invoice_scheme_id
                         ]
                     ];
             })->all();
@@ -139,8 +141,26 @@ class BusinessLocation extends Model
     public function getLocationAddressAttribute() 
     {
         $location = $this;
-        $address = $location->landmark . ', ' .$location->city . 
-        ', ' . $location->state . '<br>' . $location->country . ', ' . $location->zip_code;
+        $address_line_1 = [];
+        if (!empty($location->landmark)) {
+            $address_line_1[] = $location->landmark;
+        }
+        if (!empty($location->city)) {
+            $address_line_1[] = $location->city;
+        }
+        if (!empty($location->state)) {
+            $address_line_1[] = $location->state;
+        }
+        if (!empty($location->zip_code)) {
+            $address_line_1[] = $location->zip_code;
+        }
+        $address = implode(', ', $address_line_1);
+        $address_line_2 = [];
+        if (!empty($location->country)) {
+            $address_line_2[] = $location->country;
+        }
+        $address .= '<br>';
+        $address .= implode(', ', $address_line_2);
 
         return $address;
     }

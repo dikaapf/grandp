@@ -1,11 +1,14 @@
 @extends('layouts.app')
 
-@section('title', __('sale.edit_sale'))
+@php
+	$title = $transaction->type == 'sales_order' ? __('lang_v1.edit_sales_order') : __('sale.edit_sale');
+@endphp
+@section('title', $title)
 
 @section('content')
 <!-- Content Header (Page header) -->
 <section class="content-header">
-    <h1>@lang('sale.edit_sale') <small>(@lang('sale.invoice_no'): <span class="text-success">#{{$transaction->invoice_no}})</span></small></h1>
+    <h1>{{$title}} <small>(@if($transaction->type == 'sales_order') @lang('restaurant.order_no') @else @lang('sale.invoice_no') @endif: <span class="text-success">#{{$transaction->invoice_no}})</span></small></h1>
 </section>
 <!-- Main content -->
 <section class="content">
@@ -19,11 +22,16 @@
 @endif
 @php
 	$custom_labels = json_decode(session('business.custom_labels'), true);
+	$common_settings = session()->get('business.common_settings');
 @endphp
 <input type="hidden" id="item_addition_method" value="{{$business_details->item_addition_method}}">
 	{!! Form::open(['url' => action('SellPosController@update', ['id' => $transaction->id ]), 'method' => 'put', 'id' => 'edit_sell_form', 'files' => true ]) !!}
 
-	{!! Form::hidden('location_id', $transaction->location_id, ['id' => 'location_id', 'data-receipt_printer_type' => !empty($location_printer_type) ? $location_printer_type : 'browser']); !!}
+	{!! Form::hidden('location_id', $transaction->location_id, ['id' => 'location_id', 'data-receipt_printer_type' => !empty($location_printer_type) ? $location_printer_type : 'browser', 'data-default_payment_accounts' => $transaction->location->default_payment_accounts]); !!}
+
+	@if($transaction->type == 'sales_order')
+	 	<input type="hidden" id="sale_type" value="{{$transaction->type}}">
+	@endif
 	<div class="row">
 		<div class="col-md-12 col-sm-12">
 			@component('components.widget', ['class' => 'box-solid'])
@@ -96,6 +104,7 @@
 								<button type="button" class="btn btn-default bg-white btn-flat add_new_customer" data-name=""><i class="fa fa-plus-circle text-primary fa-lg"></i></button>
 							</span>
 						</div>
+						<small class="text-danger @if(empty($customer_due)) hide @endif contact_due_text"><strong>@lang('account.customer_due'):</strong> <span>{{$customer_due ?? ''}}</span></small>
 					</div>
 					<small>
 						<strong>
@@ -119,25 +128,31 @@
 				<div class="col-md-3">
 		          <div class="form-group">
 		            <div class="multi-input">
+		            	@php
+							$is_pay_term_required = !empty($pos_settings['is_pay_term_required']);
+						@endphp
 		              {!! Form::label('pay_term_number', __('contact.pay_term') . ':') !!} @show_tooltip(__('tooltip.pay_term'))
 		              <br/>
-		              {!! Form::number('pay_term_number', $transaction->pay_term_number, ['class' => 'form-control width-40 pull-left', 'placeholder' => __('contact.pay_term')]); !!}
+		              {!! Form::number('pay_term_number', $transaction->pay_term_number, ['class' => 'form-control width-40 pull-left', 'placeholder' => __('contact.pay_term'), 'required' => $is_pay_term_required]); !!}
 
 		              {!! Form::select('pay_term_type', 
 		              	['months' => __('lang_v1.months'), 
 		              		'days' => __('lang_v1.days')], 
 		              		$transaction->pay_term_type, 
-		              	['class' => 'form-control width-60 pull-left','placeholder' => __('messages.please_select')]); !!}
+		              	['class' => 'form-control width-60 pull-left','placeholder' => __('messages.please_select'), 'required' => $is_pay_term_required]); !!}
 		            </div>
 		          </div>
 		        </div>
 
 				@if(!empty($commission_agent))
+				@php
+					$is_commission_agent_required = !empty($pos_settings['is_commission_agent_required']);
+				@endphp
 				<div class="col-sm-3">
 					<div class="form-group">
 					{!! Form::label('commission_agent', __('lang_v1.commission_agent') . ':') !!}
 					{!! Form::select('commission_agent', 
-								$commission_agent, $transaction->commission_agent, ['class' => 'form-control select2']); !!}
+								$commission_agent, $transaction->commission_agent, ['class' => 'form-control select2', 'id' => 'commission_agent', 'required' => $is_commission_agent_required]); !!}
 					</div>
 				</div>
 				@endif
@@ -161,12 +176,16 @@
 						$status = $transaction->status;
 					}
 				@endphp
-				<div class="@if(!empty($commission_agent)) col-sm-3 @else col-sm-4 @endif">
-					<div class="form-group">
-						{!! Form::label('status', __('sale.status') . ':*') !!}
-						{!! Form::select('status', ['final' => __('sale.final'), 'draft' => __('sale.draft'), 'quotation' => __('lang_v1.quotation'), 'proforma' => __('lang_v1.proforma')], $status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required']); !!}
+				@if($transaction->type == 'sales_order')
+					<input type="hidden" name="status" id="status" value="{{$transaction->status}}">
+				@else
+					<div class="@if(!empty($commission_agent)) col-sm-3 @else col-sm-4 @endif">
+						<div class="form-group">
+							{!! Form::label('status', __('sale.status') . ':*') !!}
+							{!! Form::select('status', $statuses, $status, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select'), 'required']); !!}
+						</div>
 					</div>
-				</div>
+				@endif
 				@if($transaction->status == 'draft')
 				<div class="col-sm-3">
 					<div class="form-group">
@@ -178,8 +197,8 @@
 				@can('edit_invoice_number')
 				<div class="col-sm-3">
 					<div class="form-group">
-						{!! Form::label('invoice_no', __('sale.invoice_no') . ':') !!}
-						{!! Form::text('invoice_no', $transaction->invoice_no, ['class' => 'form-control', 'placeholder' => __('sale.invoice_no')]); !!}
+						{!! Form::label('invoice_no', $transaction->type == 'sales_order' ? __('restaurant.order_no'): __('sale.invoice_no') . ':') !!}
+						{!! Form::text('invoice_no', $transaction->invoice_no, ['class' => 'form-control', 'placeholder' => $transaction->type == 'sales_order' ? __('restaurant.order_no'): __('sale.invoice_no')]); !!}
 					</div>
 				</div>
 				@endcan
@@ -269,6 +288,15 @@
 	                </div>
 	            </div>
 		        <div class="clearfix"></div>
+		        @if((!empty($pos_settings['enable_sales_order']) && $transaction->type != 'sales_order') || $is_order_request_enabled)
+					<div class="col-sm-3">
+						<div class="form-group">
+							{!! Form::label('sales_order_ids', __('lang_v1.sales_order').':') !!}
+							{!! Form::select('sales_order_ids[]', $sales_orders, $transaction->sales_order_ids, ['class' => 'form-control select2 not_loaded', 'multiple', 'id' => 'sales_order_ids']); !!}
+						</div>
+					</div>
+					<div class="clearfix"></div>
+				@endif
 				<!-- Call restaurant module if defined -->
 		        @if(in_array('tables' ,$enabled_modules) || in_array('service_staff' ,$enabled_modules))
 		        	<span id="restaurant_module_span" 
@@ -282,7 +310,7 @@
 					<div class="form-group">
 						<div class="input-group">
 							<div class="input-group-btn">
-								<button type="button" class="btn btn-default bg-white btn-flat" data-toggle="modal" data-target="#configure_search_modal" title="{{__('lang_v1.configure_product_search')}}"><i class="fa fa-barcode"></i></button>
+								<button type="button" class="btn btn-default bg-white btn-flat" data-toggle="modal" data-target="#configure_search_modal" title="{{__('lang_v1.configure_product_search')}}"><i class="fas fa-search-plus"></i></button>
 							</div>
 							{!! Form::text('search_product', null, ['class' => 'form-control mousetrap', 'id' => 'search_product', 'placeholder' => __('lang_v1.search_product_placeholder'),
 							'autofocus' => true,
@@ -322,10 +350,10 @@
 										@lang('restaurant.service_staff')
 									</th>
 								@endif
-								<th @can('edit_product_price_from_sale_screen')) hide @endcan>
+								<th class="@if(!auth()->user()->can('edit_product_price_from_sale_screen')) hide @endif">
 									@lang('sale.unit_price')
 								</th>
-								<th @can('edit_product_discount_from_sale_screen') hide @endcan>
+								<th class="@if(!auth()->user()->can('edit_product_discount_from_sale_screen')) hide @endif">
 									@lang('receipt.discount')
 								</th>
 								<th class="text-center {{$hide_tax}}">
@@ -334,15 +362,18 @@
 								<th class="text-center {{$hide_tax}}">
 									@lang('sale.price_inc_tax')
 								</th>
+								@if(!empty($common_settings['enable_product_warranty']))
+									<th>@lang('lang_v1.warranty')</th>
+								@endif
 								<th class="text-center">
 									@lang('sale.subtotal')
 								</th>
-								<th class="text-center"><i class="fa fa-close" aria-hidden="true"></i></th>
+								<th class="text-center"><i class="fas fa-times" aria-hidden="true"></i></th>
 							</tr>
 						</thead>
 						<tbody>
 							@foreach($sell_details as $sell_line)
-								@include('sale_pos.product_row', ['product' => $sell_line, 'row_count' => $loop->index, 'tax_dropdown' => $taxes, 'sub_units' => !empty($sell_line->unit_details) ? $sell_line->unit_details : [], 'action' => 'edit', 'is_direct_sell' => true ])
+								@include('sale_pos.product_row', ['product' => $sell_line, 'row_count' => $loop->index, 'tax_dropdown' => $taxes, 'sub_units' => !empty($sell_line->unit_details) ? $sell_line->unit_details : [], 'action' => 'edit', 'is_direct_sell' => true, 'so_line' => $sell_line->so_line, 'is_sales_order' => $transaction->type == 'sales_order'])
 							@endforeach
 						</tbody>
 					</table>
@@ -366,7 +397,7 @@
 			@endcomponent
 
 			@component('components.widget', ['class' => 'box-solid'])
-				<div class="col-md-4">
+				<div class="col-md-4 @if($transaction->type == 'sales_order') hide @endif">
 			        <div class="form-group">
 			            {!! Form::label('discount_type', __('sale.discount_type') . ':*' ) !!}
 			            <div class="input-group">
@@ -380,7 +411,7 @@
 			    @php
 			    	$max_discount = !is_null(auth()->user()->max_sales_discount_percent) ? auth()->user()->max_sales_discount_percent : '';
 			    @endphp
-			    <div class="col-md-4">
+			    <div class="col-md-4 @if($transaction->type == 'sales_order') hide @endif">
 			        <div class="form-group">
 			            {!! Form::label('discount_amount', __('sale.discount_amount') . ':*' ) !!}
 			            <div class="input-group">
@@ -391,12 +422,12 @@
 			            </div>
 			        </div>
 			    </div>
-			    <div class="col-md-4"><br>
+			    <div class="col-md-4 @if($transaction->type == 'sales_order') hide @endif"><br>
 			    	<b>@lang( 'sale.discount_amount' ):</b>(-) 
 					<span class="display_currency" id="total_discount">0</span>
 			    </div>
 			    <div class="clearfix"></div>
-			    <div class="col-md-12 well well-sm bg-light-gray @if(session('business.enable_rp') != 1) hide @endif">
+			    <div class="col-md-12 well well-sm bg-light-gray @if(session('business.enable_rp') != 1 || $transaction->type == 'sales_order') hide @endif">
 			    	<input type="hidden" name="rp_redeemed" id="rp_redeemed" value="{{$transaction->rp_redeemed}}">
 			    	<input type="hidden" name="rp_redeemed_amount" id="rp_redeemed_amount" value="{{$transaction->rp_redeemed_amount}}">
 			    	<div class="col-md-12"><h4>{{session('business.rp_name')}}</h4></div>
@@ -420,7 +451,7 @@
 				    </div>
 			    </div>
 			    <div class="clearfix"></div>
-			    <div class="col-md-4">
+			    <div class="col-md-4 @if($transaction->type == 'sales_order') hide @endif">
 			    	<div class="form-group">
 			            {!! Form::label('tax_rate_id', __('sale.order_tax') . ':*' ) !!}
 			            <div class="input-group">
@@ -434,7 +465,7 @@
 			            </div>
 			        </div>
 			    </div>
-			    <div class="col-md-4 col-md-offset-4">
+			    <div class="col-md-4 col-md-offset-4 @if($transaction->type == 'sales_order') hide @endif">
 			    	<b>@lang( 'sale.order_tax' ):</b>(+) 
 					<span class="display_currency" id="order_tax">{{$transaction->tax_amount}}</span>
 			    </div>
@@ -596,6 +627,53 @@
                 </div>
             </div>
 	        <div class="clearfix"></div>
+	        <div class="col-md-12 text-center">
+				<button type="button" class="btn btn-primary btn-sm" id="toggle_additional_expense"> <i class="fas fa-plus"></i> @lang('lang_v1.add_additional_expenses') <i class="fas fa-chevron-down"></i></button>
+			</div>
+			<div class="col-md-8 col-md-offset-4" id="additional_expenses_div">
+				<table class="table table-condensed">
+					<thead>
+						<tr>
+							<th>@lang('lang_v1.additional_expense_name')</th>
+							<th>@lang('sale.amount')</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>
+								{!! Form::text('additional_expense_key_1', $transaction->additional_expense_key_1, ['class' => 'form-control', 'id' => 'additional_expense_key_1']); !!}
+							</td>
+							<td>
+								{!! Form::text('additional_expense_value_1', @num_format($transaction->additional_expense_value_1), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_1']); !!}
+							</td>
+						</tr>
+						<tr>
+							<td>
+								{!! Form::text('additional_expense_key_2', $transaction->additional_expense_key_2, ['class' => 'form-control', 'id' => 'additional_expense_key_2']); !!}
+							</td>
+							<td>
+								{!! Form::text('additional_expense_value_2', @num_format($transaction->additional_expense_value_2), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_2']); !!}
+							</td>
+						</tr>
+						<tr>
+							<td>
+								{!! Form::text('additional_expense_key_3', $transaction->additional_expense_key_3, ['class' => 'form-control', 'id' => 'additional_expense_key_3']); !!}
+							</td>
+							<td>
+								{!! Form::text('additional_expense_value_3', @num_format($transaction->additional_expense_value_3), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_3']); !!}
+							</td>
+						</tr>
+						<tr>
+							<td>
+								{!! Form::text('additional_expense_key_4', $transaction->additional_expense_key_4, ['class' => 'form-control', 'id' => 'additional_expense_key_4']); !!}
+							</td>
+							<td>
+								{!! Form::text('additional_expense_value_4', @num_format($transaction->additional_expense_value_4), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_4']); !!}
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
 		    <div class="col-md-4 col-md-offset-8">
 		    	@if(!empty($pos_settings['amount_rounding_method']) && $pos_settings['amount_rounding_method'] > 0)
 		    	<small id="round_off"><br>(@lang('lang_v1.round_off'): <span id="round_off_text">0</span>)</small>
@@ -609,13 +687,108 @@
 				</div>
 		    </div>
 			@endcomponent
+			@if(!empty($common_settings['is_enabled_export']) && $transaction->type != 'sales_order')
+				@component('components.widget', ['class' => 'box-solid', 'title' => __('lang_v1.export')])
+					<div class="col-md-12 mb-12">
+		                <div class="form-check">
+		                    <input type="checkbox" name="is_export" class="form-check-input" id="is_export" @if(!empty($transaction->is_export)) checked @endif>
+		                    <label class="form-check-label" for="is_export">@lang('lang_v1.is_export')</label>
+		                </div>
+		            </div>
+			        @php
+	                	$i = 1;
+		            @endphp
+		            @for($i; $i <= 6 ; $i++)
+		                <div class="col-md-4 export_div" @if(empty($transaction->is_export)) style="display: none;" @endif>
+		                    <div class="form-group">
+		                        {!! Form::label('export_custom_field_'.$i, __('lang_v1.export_custom_field'.$i).':') !!}
+		                        {!! Form::text('export_custom_fields_info['.'export_custom_field_'.$i.']', !empty($transaction->export_custom_fields_info['export_custom_field_'.$i]) ? $transaction->export_custom_fields_info['export_custom_field_'.$i] : null, ['class' => 'form-control','placeholder' => __('lang_v1.export_custom_field'.$i), 'id' => 'export_custom_field_'.$i]); !!}
+		                    </div>
+		                </div>
+		            @endfor
+				@endcomponent
+			@endif
 		</div>
 	</div>
+	@php
+		$is_enabled_download_pdf = config('constants.enable_download_pdf');
+	@endphp
+	@if($is_enabled_download_pdf && $transaction->type != 'sales_order')
+		@can('sell.payments')
+			@component('components.widget', ['class' => 'box-solid', 'title' => __('purchase.add_payment')])
+				<div class="well row">
+					<div class="col-md-6">
+						<div class="form-group">
+							{!! Form::label("prefer_payment_method" , __('lang_v1.prefer_payment_method') . ':') !!}
+							@show_tooltip(__('lang_v1.this_will_be_shown_in_pdf'))
+							<div class="input-group">
+								<span class="input-group-addon">
+									<i class="fas fa-money-bill-alt"></i>
+								</span>
+								{!! Form::select("prefer_payment_method", $payment_types, $transaction->prefer_payment_method, ['class' => 'form-control','style' => 'width:100%;']); !!}
+							</div>
+						</div>
+					</div>
+					<div class="col-md-6">
+						<div class="form-group">
+							{!! Form::label("prefer_payment_account" , __('lang_v1.prefer_payment_account') . ':') !!}
+							@show_tooltip(__('lang_v1.this_will_be_shown_in_pdf'))
+							<div class="input-group">
+								<span class="input-group-addon">
+									<i class="fas fa-money-bill-alt"></i>
+								</span>
+								{!! Form::select("prefer_payment_account", $accounts, $transaction->prefer_payment_account, ['class' => 'form-control','style' => 'width:100%;']); !!}
+							</div>
+						</div>
+					</div>
+				</div>
+			@endcomponent
+		@endcan
+	@endif
+
+	@if($transaction->type = 'sell')
+	@can('sell.payments')
+		@component('components.widget', ['class' => 'box-solid', 'title' => __('purchase.add_payment')])
+			<div class="payment_row" id="payment_rows_div">
+			@foreach($payment_lines as $payment_line)			
+				@if($payment_line['is_return'] == 1)
+					@php
+						$change_return = $payment_line;
+					@endphp
+
+					@continue
+				@endif
+
+				@if(!empty($payment_line['id']))
+        			{!! Form::hidden("payment[$loop->index][payment_id]", $payment_line['id']); !!}
+        		@endif
+
+				@include('sale_pos.partials.payment_row_form', ['row_index' => $loop->index, 'show_date' => true, 'payment_line' => $payment_line])
+			@endforeach
+			</div>
+
+			<div class="col-md-12">
+        		<hr>
+        		<strong>
+        			@lang('lang_v1.change_return'):
+        		</strong>
+        		<br/>
+        		<span class="lead text-bold change_return_span">0</span>
+        		{!! Form::hidden("change_return", $change_return['amount'], ['class' => 'form-control change_return input_number', 'required', 'id' => "change_return"]); !!}
+        		<!-- <span class="lead text-bold total_quantity">0</span> -->
+        		@if(!empty($change_return['id']))
+            		<input type="hidden" name="change_return_id" 
+            		value="{{$change_return['id']}}">
+            	@endif
+			</div>
+		@endcomponent
+	@endcan
+	@endif
 	<div class="row">
-		<div class="col-md-12 text-right">
+		<div class="col-md-12 text-center">
 	    	{!! Form::hidden('is_save_and_print', 0, ['id' => 'is_save_and_print']); !!}
-	    	<button type="button" class="btn btn-primary" id="submit-sell">@lang('messages.update')</button>
-	    	<button type="button" id="save-and-print" class="btn btn-primary btn-flat">@lang('lang_v1.update_and_print')</button>
+	    	<button type="button" class="btn btn-primary btn-big" id="submit-sell">@lang('messages.update')</button>
+	    	<button type="button" id="save-and-print" class="btn btn-success btn-big">@lang('lang_v1.update_and_print')</button>
 	    </div>
 	</div>
 	@if(in_array('subscription', $enabled_modules))
@@ -657,6 +830,26 @@
 		        browseLabel: LANG.file_browse_label,
 		        removeLabel: LANG.remove,
 		    });
+
+		    $('#is_export').on('change', function () {
+	            if ($(this).is(':checked')) {
+	                $('div.export_div').show();
+	            } else {
+	                $('div.export_div').hide();
+	            }
+	        });
+
+	        $('#status').change(function(){
+    			if ($(this).val() == 'final') {
+    				$('#payment_rows_div').removeClass('hide');
+    			} else {
+    				$('#payment_rows_div').addClass('hide');
+    			}
+    		});
+    		$('.paid_on').datetimepicker({
+                format: moment_date_format + ' ' + moment_time_format,
+                ignoreReadonly: true,
+            });
     	});
     </script>
 @endsection

@@ -102,6 +102,14 @@
 			{{$receipt_details->invoice_no}}
 		</p>
 
+		<p class="text-right">
+			@if(!empty($receipt_details->parent_invoice_no_prefix))
+				<span class="pull-left">{!! $receipt_details->parent_invoice_no_prefix !!}</span>
+			@endif
+
+			{{$receipt_details->parent_invoice_no}}
+		</p>
+
 
 		{{--
 			<table class="table table-condensed">

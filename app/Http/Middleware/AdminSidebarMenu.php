@@ -24,6 +24,9 @@ class AdminSidebarMenu
         Menu::create('admin-sidebar-menu', function ($menu) {
             $enabled_modules = !empty(session('business.enabled_modules')) ? session('business.enabled_modules') : [];
 
+            $common_settings = !empty(session('business.common_settings')) ? session('business.common_settings') : [];
+            $pos_settings = !empty(session('business.pos_settings')) ? json_decode(session('business.pos_settings'), true) : [];
+
             $is_admin = auth()->user()->hasRole('Admin#' . session('business.id')) ? true : false;
             //Home
             $menu->url(action('HomeController@index'), __('home.home'), ['icon' => 'fa fas fa-tachometer-alt', 'active' => request()->segment(1) == 'home'])->order(5);
@@ -60,18 +63,18 @@ class AdminSidebarMenu
             }
 
             //Contacts dropdown
-            if (auth()->user()->can('supplier.view') || auth()->user()->can('customer.view')) {
+            if (auth()->user()->can('supplier.view') || auth()->user()->can('customer.view') || auth()->user()->can('supplier.view_own') || auth()->user()->can('customer.view_own')) {
                 $menu->dropdown(
                     __('contact.contacts'),
                     function ($sub) {
-                        if (auth()->user()->can('supplier.view')) {
+                        if (auth()->user()->can('supplier.view') || auth()->user()->can('supplier.view_own')) {
                             $sub->url(
                                 action('ContactController@index', ['type' => 'supplier']),
                                 __('report.supplier'),
                                 ['icon' => 'fa fas fa-star', 'active' => request()->input('type') == 'supplier']
                             );
                         }
-                        if (auth()->user()->can('customer.view')) {
+                        if (auth()->user()->can('customer.view') || auth()->user()->can('customer.view_own')) {
                             $sub->url(
                                 action('ContactController@index', ['type' => 'customer']),
                                 __('report.customer'),
@@ -194,7 +197,14 @@ class AdminSidebarMenu
             if (in_array('purchases', $enabled_modules) && (auth()->user()->can('purchase.view') || auth()->user()->can('purchase.create') || auth()->user()->can('purchase.update'))) {
                 $menu->dropdown(
                     __('purchase.purchases'),
-                    function ($sub) {
+                    function ($sub) use ($common_settings) {
+                        if (!empty($common_settings['enable_purchase_order']) && (auth()->user()->can('purchase_order.view_all') || auth()->user()->can('purchase_order.view_own')) ) {
+                            $sub->url(
+                                action('PurchaseOrderController@index'),
+                                __('lang_v1.purchase_order'),
+                                ['icon' => 'fa fas fa-list', 'active' => request()->segment(1) == 'purchase-order']
+                            );
+                        }
                         if (auth()->user()->can('purchase.view') || auth()->user()->can('view_own_purchase')) {
                             $sub->url(
                                 action('PurchaseController@index'),
@@ -221,11 +231,19 @@ class AdminSidebarMenu
                 )->order(25);
             }
             //Sell dropdown
-            if ($is_admin || auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'access_sell_return']) ) {
+            if ($is_admin || auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'access_sell_return', 'direct_sell.view', 'direct_sell.update', 'access_own_sell_return']) ) {
                 $menu->dropdown(
                     __('sale.sale'),
-                    function ($sub) use ($enabled_modules, $is_admin) {
-                        if ($is_admin || auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping']) ) {
+                    function ($sub) use ($enabled_modules, $is_admin, $pos_settings) {
+                        if (!empty($pos_settings['enable_sales_order']) && ($is_admin ||auth()->user()->hasAnyPermission(['so.view_own', 'so.view_all', 'so.create'])) ) {
+                            $sub->url(
+                                action('SalesOrderController@index'),
+                                __('lang_v1.sales_order'),
+                                ['icon' => 'fa fas fa-plus-circle', 'active' => request()->segment(1) == 'sales-order']
+                            );
+                        }
+
+                        if ($is_admin || auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'direct_sell.view', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping']) ) {
                             $sub->url(
                                 action('SellController@index'),
                                 __('lang_v1.all_sales'),
@@ -239,15 +257,16 @@ class AdminSidebarMenu
                                 ['icon' => 'fa fas fa-plus-circle', 'active' => request()->segment(1) == 'sells' && request()->segment(2) == 'create' && empty(request()->get('status'))]
                             );
                         }
-                        if (auth()->user()->can('sell.view')) {
-                            $sub->url(
-                                action('SellPosController@index'),
-                                __('sale.list_pos'),
-                                ['icon' => 'fa fas fa-list', 'active' => request()->segment(1) == 'pos' && request()->segment(2) == null]
-                            );
-                        }
                         if (auth()->user()->can('sell.create')) {
                             if (in_array('pos_sale', $enabled_modules)) {
+                                if (auth()->user()->can('sell.view')) {
+                                    $sub->url(
+                                        action('SellPosController@index'),
+                                        __('sale.list_pos'),
+                                        ['icon' => 'fa fas fa-list', 'active' => request()->segment(1) == 'pos' && request()->segment(2) == null]
+                                    );
+                                }
+                        
                                 $sub->url(
                                     action('SellPosController@create'),
                                     __('sale.pos_sale'),
@@ -255,6 +274,7 @@ class AdminSidebarMenu
                                 );
                             }
                         }
+
                         if (in_array('add_sale', $enabled_modules) && auth()->user()->can('direct_sell.access')) {
                             $sub->url(
                                 action('SellController@create', ['status' => 'draft']),
@@ -262,7 +282,7 @@ class AdminSidebarMenu
                                 ['icon' => 'fa fas fa-plus-circle', 'active' => request()->get('status') == 'draft']
                             );
                         }
-                        if (auth()->user()->can('list_drafts')) {
+                        if (in_array('add_sale', $enabled_modules) && ( $is_admin ||auth()->user()->hasAnyPermission(['draft.view_all', 'draft.view_own'])) ) {
                             $sub->url(
                                 action('SellController@getDrafts'),
                                 __('lang_v1.list_drafts'),
@@ -276,7 +296,7 @@ class AdminSidebarMenu
                                 ['icon' => 'fa fas fa-plus-circle', 'active' => request()->get('status') == 'quotation']
                             );
                         }
-                        if (auth()->user()->can('list_quotations')) {
+                        if (in_array('add_sale', $enabled_modules) && ( $is_admin || auth()->user()->hasAnyPermission(['quotation.view_all', 'quotation.view_own'])) ) {
                             $sub->url(
                                 action('SellController@getQuotations'),
                                 __('lang_v1.list_quotations'),
@@ -284,7 +304,7 @@ class AdminSidebarMenu
                             );
                         }
 
-                        if (auth()->user()->can('access_sell_return')) {
+                        if (auth()->user()->can('access_sell_return') || auth()->user()->can('access_own_sell_return')) {
                             $sub->url(
                                 action('SellReturnController@index'),
                                 __('lang_v1.list_sell_return'),
@@ -376,7 +396,7 @@ class AdminSidebarMenu
             }
 
             //Expense dropdown
-            if (in_array('expenses', $enabled_modules) && (auth()->user()->can('expense.access') || auth()->user()->can('view_own_expense'))) {
+            if (in_array('expenses', $enabled_modules) && (auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense'))) {
                 $menu->dropdown(
                     __('expense.expenses'),
                     function ($sub) {
@@ -385,16 +405,22 @@ class AdminSidebarMenu
                             __('lang_v1.list_expenses'),
                             ['icon' => 'fa fas fa-list', 'active' => request()->segment(1) == 'expenses' && request()->segment(2) == null]
                         );
-                        $sub->url(
-                            action('ExpenseController@create'),
-                            __('expense.add_expense'),
-                            ['icon' => 'fa fas fa-plus-circle', 'active' => request()->segment(1) == 'expenses' && request()->segment(2) == 'create']
-                        );
-                        $sub->url(
-                            action('ExpenseCategoryController@index'),
-                            __('expense.expense_categories'),
-                            ['icon' => 'fa fas fa-circle', 'active' => request()->segment(1) == 'expense-categories']
-                        );
+
+                        if (auth()->user()->can('expense.add')) {
+                            $sub->url(
+                                action('ExpenseController@create'),
+                                __('expense.add_expense'),
+                                ['icon' => 'fa fas fa-plus-circle', 'active' => request()->segment(1) == 'expenses' && request()->segment(2) == 'create']
+                            );
+                        }
+
+                        if (auth()->user()->can('expense.add') || auth()->user()->can('expense.edit')) {
+                            $sub->url(
+                                action('ExpenseCategoryController@index'),
+                                __('expense.expense_categories'),
+                                ['icon' => 'fa fas fa-circle', 'active' => request()->segment(1) == 'expense-categories']
+                            );
+                        }
                     },
                     ['icon' => 'fa fas fa-minus-circle']
                 )->order(45);
@@ -441,7 +467,7 @@ class AdminSidebarMenu
                 || auth()->user()->can('expense_report.view')) {
                 $menu->dropdown(
                     __('report.reports'),
-                    function ($sub) use ($enabled_modules) {
+                    function ($sub) use ($enabled_modules, $is_admin) {
                         if (auth()->user()->can('profit_loss_report.view')) {
                             $sub->url(
                                 action('ReportController@getProfitLoss'),
@@ -593,6 +619,14 @@ class AdminSidebarMenu
                                 action('ReportController@getServiceStaffReport'),
                                 __('restaurant.service_staff_report'),
                                 ['icon' => 'fa fas fa-user-secret', 'active' => request()->segment(2) == 'service-staff-report']
+                            );
+                        }
+
+                        if ($is_admin) {
+                            $sub->url(
+                                action('ReportController@activityLog'),
+                                __('lang_v1.activity_log'),
+                                ['icon' => 'fa fas fa-user-secret', 'active' => request()->segment(2) == 'activity-log']
                             );
                         }
                     },

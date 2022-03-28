@@ -111,7 +111,7 @@
 
                             @foreach($stock_details as $row)
                                 @php
-                                    $stock_mismatch = $row->stock - $row->total_stock_calculated;
+                                    $stock_mismatch = round($row->stock) - round($row->total_stock_calculated);
                                 @endphp
                                 @if($stock_mismatch == 0)
                                     @continue

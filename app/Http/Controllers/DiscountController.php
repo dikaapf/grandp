@@ -10,6 +10,7 @@ use App\Utils\Util;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
+use App\SellingPriceGroup;
 
 class DiscountController extends Controller
 {
@@ -117,8 +118,10 @@ class DiscountController extends Controller
 
         $locations = BusinessLocation::forDropdown($business_id);
 
+        $price_groups = SellingPriceGroup::forDropdown($business_id);
+
         return view('discount.create')
-                ->with(compact('categories', 'brands', 'locations'));
+                ->with(compact('categories', 'brands', 'locations', 'price_groups'));
     }
 
     /**
@@ -135,7 +138,7 @@ class DiscountController extends Controller
 
         try {
             $input = $request->only(['name', 'brand_id', 'category_id',
-                'location_id', 'priority', 'discount_type', 'discount_amount']);
+                'location_id', 'priority', 'discount_type', 'discount_amount', 'spg']);
 
             $business_id = $request->session()->get('user.business_id');
             $input['business_id'] = $business_id;
@@ -149,7 +152,7 @@ class DiscountController extends Controller
 
             $input['starts_at'] = $request->has('starts_at') ? $this->commonUtil->uf_date($request->input('starts_at'), true) : null;
             $input['ends_at'] = $request->has('ends_at') ? $this->commonUtil->uf_date($request->input('ends_at'), true) : null;
-            $checkboxes = ['is_active', 'applicable_in_spg', 'applicable_in_cg'];
+            $checkboxes = ['is_active', 'applicable_in_cg'];
 
             foreach ($checkboxes as $checkbox) {
                 $input[$checkbox] = $request->has($checkbox) ? 1 : 0;
@@ -211,8 +214,10 @@ class DiscountController extends Controller
                 $variations[$variation->id] = $variation->full_name;
             }
 
+            $price_groups = SellingPriceGroup::forDropdown($business_id);
+
             return view('discount.edit')
-                ->with(compact('discount', 'starts_at', 'ends_at', 'brands', 'categories', 'locations', 'variations'));
+                ->with(compact('discount', 'starts_at', 'ends_at', 'brands', 'categories', 'locations', 'variations', 'price_groups'));
         }
     }
 
@@ -232,13 +237,13 @@ class DiscountController extends Controller
         if (request()->ajax()) {
             try {
                 $input = $request->only(['name', 'brand_id', 'category_id',
-                'location_id', 'priority', 'discount_type', 'discount_amount']);
+                'location_id', 'priority', 'discount_type', 'discount_amount', 'spg']);
 
                 $business_id = $request->session()->get('user.business_id');
 
                 $input['starts_at'] = $request->has('starts_at') ? $this->commonUtil->uf_date($request->input('starts_at'), true) : null;
                 $input['ends_at'] = $request->has('ends_at') ? $this->commonUtil->uf_date($request->input('ends_at'), true) : null;
-                $checkboxes = ['is_active', 'applicable_in_spg', 'applicable_in_cg'];
+                $checkboxes = ['is_active', 'applicable_in_cg'];
 
                 foreach ($checkboxes as $checkbox) {
                     $input[$checkbox] = $request->has($checkbox) ? 1 : 0;

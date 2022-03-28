@@ -56,4 +56,7 @@
 "sale_date" => "Verkaufsdatum",
 "list_pos" => "Liste POS",
 "edit_sale" => "Verkauf bearbeiten",
+"shipping"=>"Versand",
+"shipping_details"=>"Versanddetails",
+"shipping_charges"=>"Versandkosten",
 ];

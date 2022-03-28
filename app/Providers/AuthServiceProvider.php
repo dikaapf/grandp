@@ -33,7 +33,7 @@ class AuthServiceProvider extends ServiceProvider
                 'manage_modules'])) {
                 $administrator_list = config('constants.administrator_usernames');
             
-                if (in_array($user->username, explode(',', $administrator_list))) {
+                if (in_array(strtolower($user->username), explode(',', strtolower($administrator_list)))) {
                     return true;
                 }
             } else {

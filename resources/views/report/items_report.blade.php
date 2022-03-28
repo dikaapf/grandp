@@ -84,22 +84,24 @@
                             <tr>
                                 <th>@lang('sale.product')</th>
                                 <th>@lang('product.sku')</th>
+                                <th>@lang('lang_v1.description')</th>
                                 <th>@lang('purchase.purchase_date')</th>
                                 <th>@lang('lang_v1.purchase')</th>
+                                <th>@lang('lang_v1.lot_number')</th>
                                 <th>@lang('purchase.supplier')</th>
                                 <th>@lang('lang_v1.purchase_price')</th>
                                 <th>@lang('lang_v1.sell_date')</th>
                                 <th>@lang('business.sale')</th>
                                 <th>@lang('contact.customer')</th>
                                 <th>@lang('sale.location')</th>
-                                <th>@lang('lang_v1.quantity')</th>
+                                <th>@lang('lang_v1.sell_quantity')</th>
                                 <th>@lang('lang_v1.selling_price')</th>
                                 <th>@lang('sale.subtotal')</th>
                             </tr>
                         </thead>
                         <tfoot>
                             <tr class="bg-gray font-17 text-center footer-total">
-                                <td colspan="5"><strong>@lang('sale.total'):</strong></td>
+                                <td colspan="7"><strong>@lang('sale.total'):</strong></td>
                                 <td id="footer_total_pp" 
                                     class="display_currency" data-currency_symbol="true"></td>
                                 <td colspan="4"></td>

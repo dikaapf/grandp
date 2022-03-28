@@ -63,7 +63,6 @@
 "brand" => "ब्रांड",
 "tax_rate" => "कर दर",
 "unit" => "इकाई",
-"expense.access" => "एक्सेस खर्च",
 "access_locations" => "पहुंच स्थान",
 "all_locations" => "समस्त स्थान",
 "dashboard" => "होम",

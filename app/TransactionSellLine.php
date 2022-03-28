@@ -102,4 +102,9 @@ class TransactionSellLine extends Model
     {
         return $this->belongsTo(\App\TaxRate::class, 'tax_id');
     }
+
+    public function so_line()
+    {
+        return $this->belongsTo(\App\TransactionSellLine::class, 'so_line_id');
+    }
 }

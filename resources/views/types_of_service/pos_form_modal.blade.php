@@ -29,6 +29,9 @@
                         $service_custom_field_2 = !empty($custom_labels['types_of_service']['custom_field_2']) ? $custom_labels['types_of_service']['custom_field_2'] : __('lang_v1.service_custom_field_2');
                         $service_custom_field_3 = !empty($custom_labels['types_of_service']['custom_field_3']) ? $custom_labels['types_of_service']['custom_field_3'] : __('lang_v1.service_custom_field_3');
                         $service_custom_field_4 = !empty($custom_labels['types_of_service']['custom_field_4']) ? $custom_labels['types_of_service']['custom_field_4'] : __('lang_v1.service_custom_field_4');
+
+                        $service_custom_field_5 = !empty($custom_labels['types_of_service']['custom_field_5']) ? $custom_labels['types_of_service']['custom_field_5'] : __('lang_v1.custom_field', ['number' => 5]);
+                        $service_custom_field_6 = !empty($custom_labels['types_of_service']['custom_field_6']) ? $custom_labels['types_of_service']['custom_field_6'] : __('lang_v1.custom_field', ['number' => 6]);
                     @endphp
                     <div class="form-group col-md-6">
                         {!! Form::label('service_custom_field_1', $service_custom_field_1 . ':') !!}
@@ -45,6 +48,14 @@
                     <div class="form-group col-md-6">
                         {!! Form::label('service_custom_field_4', $service_custom_field_4 . ':') !!}
                         {!! Form::text('service_custom_field_4', !empty($transaction) ? $transaction->service_custom_field_4 : null, ['class' => 'form-control', 'placeholder' => $service_custom_field_4 ]); !!}
+                    </div>
+                    <div class="form-group col-md-6">
+                        {!! Form::label('service_custom_field_5', $service_custom_field_5 . ':') !!}
+                        {!! Form::text('service_custom_field_5', !empty($transaction) ? $transaction->service_custom_field_5 : null, ['class' => 'form-control', 'placeholder' => $service_custom_field_5 ]); !!}
+                    </div>
+                    <div class="form-group col-md-6">
+                        {!! Form::label('service_custom_field_6', $service_custom_field_6 . ':') !!}
+                        {!! Form::text('service_custom_field_6', !empty($transaction) ? $transaction->service_custom_field_6 : null, ['class' => 'form-control', 'placeholder' => $service_custom_field_6 ]); !!}
                     </div>
                 @endif
             </div>

@@ -72,5 +72,16 @@
         </div>
     </div>
 
+    <div class="col-sm-6">
+        <div class="form-group">
+            <div class="checkbox">
+                <label>
+                {!! Form::checkbox('common_settings[enable_purchase_order]', 1, !empty($common_settings['enable_purchase_order']) , [ 'class' => 'input-icheck', 'id' => 'enable_purchase_order']); !!} {{ __( 'lang_v1.enable_purchase_order' ) }}
+                </label>
+              @show_tooltip(__('lang_v1.purchase_order_help_text'))
+            </div>
+        </div>
+    </div>
+
     </div>
 </div>

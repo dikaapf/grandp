@@ -74,7 +74,6 @@ return [
     "brand" => "Nhãn hiệu", 
     "tax_rate" => "Thuế suất", 
     "unit" => "Đơn vị", 
-    "expense.access" => "Chi phí truy cập", 
     "access_locations" => "Vị trí truy cập", 
     "all_locations" => "Tất cả địa điểm", 
     "dashboard" => "Nhà", 

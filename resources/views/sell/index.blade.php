@@ -13,21 +13,18 @@
 <section class="content no-print">
     @component('components.filters', ['title' => __('report.filters')])
         @include('sell.partials.sell_list_filters')
-        @if($is_woocommerce)
+        @if(!empty($sources))
             <div class="col-md-3">
                 <div class="form-group">
-                    <div class="checkbox">
-                        <label>
-                          {!! Form::checkbox('only_woocommerce_sells', 1, false, 
-                          [ 'class' => 'input-icheck', 'id' => 'synced_from_woocommerce']); !!} {{ __('lang_v1.synced_from_woocommerce') }}
-                        </label>
-                    </div>
+                    {!! Form::label('sell_list_filter_source',  __('lang_v1.sources') . ':') !!}
+
+                    {!! Form::select('sell_list_filter_source', $sources, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all') ]); !!}
                 </div>
             </div>
         @endif
     @endcomponent
     @component('components.widget', ['class' => 'box-primary', 'title' => __( 'lang_v1.all_sales')])
-        @can('sell.create')
+        @can('direct_sell.access')
             @slot('tool')
                 <div class="box-tools">
                     <a class="btn btn-block btn-primary" href="{{action('SellController@create')}}">
@@ -35,7 +32,7 @@
                 </div>
             @endslot
         @endcan
-        @if(auth()->user()->can('direct_sell.access') ||  auth()->user()->can('view_own_sell_only') ||  auth()->user()->can('view_commission_agent_sell'))
+        @if(auth()->user()->can('direct_sell.view') ||  auth()->user()->can('view_own_sell_only') ||  auth()->user()->can('view_commission_agent_sell'))
         @php
             $custom_labels = json_decode(session('business.custom_labels'), true);
          @endphp
@@ -58,6 +55,10 @@
                         <th>@lang('lang_v1.total_items')</th>
                         <th>@lang('lang_v1.types_of_service')</th>
                         <th>{{ $custom_labels['types_of_service']['custom_field_1'] ?? __('lang_v1.service_custom_field_1' )}}</th>
+                        <th>{{ $custom_labels['sell']['custom_field_1'] ?? '' }}</th>
+                        <th>{{ $custom_labels['sell']['custom_field_2'] ?? ''}}</th>
+                        <th>{{ $custom_labels['sell']['custom_field_3'] ?? ''}}</th>
+                        <th>{{ $custom_labels['sell']['custom_field_4'] ?? ''}}</th>
                         <th>@lang('lang_v1.added_by')</th>
                         <th>@lang('sale.sell_note')</th>
                         <th>@lang('sale.staff_note')</th>
@@ -141,12 +142,10 @@ $(document).ready( function(){
                 if($('#shipping_status').length) {
                     d.shipping_status = $('#shipping_status').val();
                 }
-                
-                @if($is_woocommerce)
-                    if($('#synced_from_woocommerce').is(':checked')) {
-                        d.only_woocommerce_sells = 1;
-                    }
-                @endif
+
+                if($('#sell_list_filter_source').length) {
+                    d.source = $('#sell_list_filter_source').val();
+                }
 
                 if($('#only_subscriptions').is(':checked')) {
                     d.only_subscriptions = 1;
@@ -175,6 +174,10 @@ $(document).ready( function(){
             { data: 'total_items', name: 'total_items', "searchable": false},
             { data: 'types_of_service_name', name: 'tos.name', @if(empty($is_types_service_enabled)) visible: false @endif},
             { data: 'service_custom_field_1', name: 'service_custom_field_1', @if(empty($is_types_service_enabled)) visible: false @endif},
+            { data: 'custom_field_1', name: 'transactions.custom_field_1', @if(empty($custom_labels['sell']['custom_field_1'])) visible: false @endif},
+            { data: 'custom_field_2', name: 'transactions.custom_field_2', @if(empty($custom_labels['sell']['custom_field_2'])) visible: false @endif},
+            { data: 'custom_field_3', name: 'transactions.custom_field_3', @if(empty($custom_labels['sell']['custom_field_3'])) visible: false @endif},
+            { data: 'custom_field_4', name: 'transactions.custom_field_4', @if(empty($custom_labels['sell']['custom_field_4'])) visible: false @endif},
             { data: 'added_by', name: 'u.first_name'},
             { data: 'additional_notes', name: 'additional_notes'},
             { data: 'staff_note', name: 'staff_note'},
@@ -194,7 +197,7 @@ $(document).ready( function(){
                 footer_sale_total += $(data[r].final_total).data('orig-value') ? parseFloat($(data[r].final_total).data('orig-value')) : 0;
                 footer_total_paid += $(data[r].total_paid).data('orig-value') ? parseFloat($(data[r].total_paid).data('orig-value')) : 0;
                 footer_total_remaining += $(data[r].total_remaining).data('orig-value') ? parseFloat($(data[r].total_remaining).data('orig-value')) : 0;
-                footer_total_sell_return_due += $(data[r].return_due).data('orig-value') ? parseFloat($(data[r].return_due).data('orig-value')) : 0;
+                footer_total_sell_return_due += $(data[r].return_due).find('.sell_return_due').data('orig-value') ? parseFloat($(data[r].return_due).find('.sell_return_due').data('orig-value')) : 0;
             }
 
             $('.footer_total_sell_return_due').html(__currency_trans_from_en(footer_total_sell_return_due));
@@ -211,14 +214,9 @@ $(document).ready( function(){
         }
     });
 
-    $(document).on('change', '#sell_list_filter_location_id, #sell_list_filter_customer_id, #sell_list_filter_payment_status, #created_by, #sales_cmsn_agnt, #service_staffs, #shipping_status',  function() {
+    $(document).on('change', '#sell_list_filter_location_id, #sell_list_filter_customer_id, #sell_list_filter_payment_status, #created_by, #sales_cmsn_agnt, #service_staffs, #shipping_status, #sell_list_filter_source',  function() {
         sell_table.ajax.reload();
     });
-    @if($is_woocommerce)
-        $('#synced_from_woocommerce').on('ifChanged', function(event){
-            sell_table.ajax.reload();
-        });
-    @endif
 
     $('#only_subscriptions').on('ifChanged', function(event){
         sell_table.ajax.reload();

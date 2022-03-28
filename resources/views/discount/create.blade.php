@@ -76,12 +76,16 @@
         <div class="clearfix"></div>
         <div class="col-sm-6">
           <div class="form-group">
-            <br>
-            <label>
-              {!! Form::checkbox('applicable_in_spg', 1, false, ['class' => 'input-icheck']); !!} <strong>@lang('lang_v1.applicable_in_cpg')</strong>
-            </label>
+            {!! Form::label('spg', __('lang_v1.selling_price_group') . ':') !!}
+            <select name="spg" class="form-control">
+              <option value="" >@lang('lang_v1.all')</option>
+              @foreach($price_groups as $k => $v)
+                <option value="{{$k}}">{{$v}}</option>
+              @endforeach
+            </select>
           </div>
         </div>
+        <div class="clearfix"></div>
         <div class="col-sm-6">
           <div class="form-group">
             <br>
@@ -90,7 +94,6 @@
             </label>
           </div>
         </div>
-        <div class="clearfix"></div>
         <div class="col-sm-6">
           <div class="form-group">
             <label>

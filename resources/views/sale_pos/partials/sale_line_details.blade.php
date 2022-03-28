@@ -5,6 +5,9 @@
         @if( session()->get('business.enable_lot_number') == 1)
             <th>{{ __('lang_v1.lot_n_expiry') }}</th>
         @endif
+        @if($sell->type == 'sales_order')
+            <th>@lang('lang_v1.quantity_remaining')</th>
+        @endif
         <th>{{ __('sale.qty') }}</th>
         @if(!empty($pos_settings['inline_service_staff']))
             <th>
@@ -55,6 +58,9 @@
                     @endif
                 </td>
             @endif
+            @if($sell->type == 'sales_order')
+                <td><span class="display_currency" data-currency_symbol="false" data-is_quantity="true">{{ $sell_line->quantity - $sell_line->so_quantity_invoiced }}</span> @if(!empty($sell_line->sub_unit)) {{$sell_line->sub_unit->short_name}} @else {{$sell_line->product->unit->short_name}} @endif</td>
+            @endif
             <td>
                 <span class="display_currency" data-currency_symbol="false" data-is_quantity="true">{{ $sell_line->quantity }}</span> @if(!empty($sell_line->sub_unit)) {{$sell_line->sub_unit->short_name}} @else {{$sell_line->product->unit->short_name}} @endif
             </td>
@@ -94,6 +100,11 @@
                     <td>&nbsp;</td>
                 @endif
                 <td>{{ $modifier->quantity }}</td>
+                @if(!empty($pos_settings['inline_service_staff']))
+                    <td>
+                        &nbsp;
+                    </td>
+                @endif
                 <td>
                     <span class="display_currency" data-currency_symbol="true">{{ $modifier->unit_price }}</span>
                 </td>

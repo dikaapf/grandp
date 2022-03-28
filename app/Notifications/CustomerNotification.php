@@ -67,6 +67,13 @@ class CustomerNotification extends Notification
         if (!empty($this->attachment)) {
             $mail->attach($this->attachment, ['as' => $this->attachment_name]);
         }
+
+        if (!empty($data['pdf']) && !empty($data['pdf_name'])) {
+            $mail->attachData($data['pdf']->Output($data['pdf_name'], 'S'), $data['pdf_name'], [
+                'mime' => 'application/pdf',
+            ]);
+        }
+
         return $mail;
     }
 

@@ -318,7 +318,7 @@ $(document).ready( function(){
             $('#ledger_date_range').val(start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format));
         }
     );
-    $('#ledger_date_range').change( function(){
+    $('#ledger_date_range, #ledger_location').change( function(){
         get_contact_ledger();
     });
     get_contact_ledger();
@@ -378,6 +378,10 @@ $("input.transaction_types, input#show_payments").on('ifChanged', function (e) {
     get_contact_ledger();
 });
 
+$(document).on('change', 'input[name="ledger_format"]', function(){
+    get_contact_ledger();
+})
+
 $(document).one('shown.bs.tab', 'a[href="#payments_tab"]', function(){
     get_contact_payments();
 })
@@ -409,13 +413,25 @@ function get_contact_ledger() {
     var end_date = '';
     var transaction_types = $('input.transaction_types:checked').map(function(i, e) {return e.value}).toArray();
     var show_payments = $('input#show_payments').is(':checked');
+    var location_id = $('#ledger_location').val();
 
     if($('#ledger_date_range').val()) {
         start_date = $('#ledger_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
         end_date = $('#ledger_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
     }
+
+    var format = $('input[name="ledger_format"]:checked').val();
+    var data = {
+        start_date: start_date,
+        transaction_types: transaction_types,
+        show_payments: show_payments,
+        end_date: end_date,
+        format: format,
+        location_id: location_id
+    }
     $.ajax({
-        url: '/contacts/ledger?contact_id={{$contact->id}}&start_date=' + start_date + '&transaction_types=' + transaction_types + '&show_payments=' + show_payments + '&end_date=' + end_date,
+        url: '/contacts/ledger?contact_id={{$contact->id}}',
+        data: data,
         dataType: 'html',
         success: function(result) {
             $('#contact_ledger_div')
@@ -435,8 +451,11 @@ function get_contact_ledger() {
 $(document).on('click', '#send_ledger', function() {
     var start_date = $('#ledger_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
     var end_date = $('#ledger_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
+    var format = $('input[name="ledger_format"]:checked').val();
 
-    var url = "{{action('NotificationController@getTemplate', [$contact->id, 'send_ledger'])}}" + '?start_date=' + start_date + '&end_date=' + end_date;
+    var location_id = $('#ledger_location').val();
+
+    var url = "{{action('NotificationController@getTemplate', [$contact->id, 'send_ledger'])}}" + '?start_date=' + start_date + '&end_date=' + end_date + '&format=' + format + '&location_id=' + location_id;
 
     $.ajax({
         url: url,
@@ -453,7 +472,11 @@ $(document).on('click', '#print_ledger_pdf', function() {
     var start_date = $('#ledger_date_range').data('daterangepicker').startDate.format('YYYY-MM-DD');
     var end_date = $('#ledger_date_range').data('daterangepicker').endDate.format('YYYY-MM-DD');
 
-    var url = $(this).data('href') + '&start_date=' + start_date + '&end_date=' + end_date;
+    var format = $('input[name="ledger_format"]:checked').val();
+
+    var location_id = $('#ledger_location').val();
+
+    var url = $(this).data('href') + '&start_date=' + start_date + '&end_date=' + end_date + '&format=' + format + '&location_id=' + location_id;
     window.open(url);
 });
 

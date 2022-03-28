@@ -35,7 +35,7 @@
         "spatie/laravel-backup": "^5.7",
         "spatie/laravel-permission": "^2.7",
         "srmklive/paypal": "^1.6",
-        "stripe/stripe-php": "^6.10",
+        "stripe/stripe-php": "^7.97",
         "unicodeveloper/laravel-paystack": "^1.0",
         "yajra/laravel-datatables-oracle": "^9.0"
     },

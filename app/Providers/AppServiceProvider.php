@@ -23,6 +23,12 @@ class AppServiceProvider extends ServiceProvider
         ini_set('memory_limit', '-1');
         set_time_limit(0);
 
+        if (config('app.debug')) {
+            error_reporting(E_ALL & ~E_USER_DEPRECATED);
+        } else {
+            error_reporting(0);
+        }
+
         //force https
         $url = parse_url(config('app.url'));
         

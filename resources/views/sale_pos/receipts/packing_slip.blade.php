@@ -112,6 +112,25 @@
 	<div class="col-md-6 invoice-col width-50 word-wrap">
 		<strong>@lang('lang_v1.shipping_address'):</strong><br>
 		{!! $receipt_details->shipping_address !!}
+		@if(!empty($receipt_details->shipping_custom_field_1_label))
+			<br><strong>{!!$receipt_details->shipping_custom_field_1_label!!} :</strong> {!!$receipt_details->shipping_custom_field_1_value ?? ''!!}
+		@endif
+
+		@if(!empty($receipt_details->shipping_custom_field_2_label))
+			<br><strong>{!!$receipt_details->shipping_custom_field_2_label!!}:</strong> {!!$receipt_details->shipping_custom_field_2_value ?? ''!!}
+		@endif
+
+		@if(!empty($receipt_details->shipping_custom_field_3_label))
+			<br><strong>{!!$receipt_details->shipping_custom_field_3_label!!}:</strong> {!!$receipt_details->shipping_custom_field_3_value ?? ''!!}
+		@endif
+
+		@if(!empty($receipt_details->shipping_custom_field_4_label))
+			<br><strong>{!!$receipt_details->shipping_custom_field_4_label!!}:</strong> {!!$receipt_details->shipping_custom_field_4_value ?? ''!!}
+		@endif
+
+		@if(!empty($receipt_details->shipping_custom_field_5_label))
+			<br><strong>{!!$receipt_details->shipping_custom_field_2_label!!}:</strong> {!!$receipt_details->shipping_custom_field_5_value ?? ''!!}
+		@endif
 	</div>
 </div>
 
@@ -142,7 +161,7 @@
                             {{$line['name']}} {{$line['product_variation']}} {{$line['variation']}} 
                             @if(!empty($line['sub_sku'])), {{$line['sub_sku']}} @endif @if(!empty($line['brand'])), {{$line['brand']}} @endif
                             @if(!empty($line['product_custom_fields'])), {{$line['product_custom_fields']}} @endif
-                            @if(!empty($line['sell_line_note']))({{$line['sell_line_note']}}) @endif
+                            @if(!empty($line['sell_line_note']))({!!$line['sell_line_note']!!}) @endif
                             @if(!empty($line['lot_number']))<br> {{$line['lot_number_label']}}:  {{$line['lot_number']}} @endif 
                             @if(!empty($line['product_expiry'])), {{$line['product_expiry_label']}}:  {{$line['product_expiry']}} @endif 
                         </td>
@@ -159,7 +178,7 @@
 								<td>
 		                            {{$modifier['name']}} {{$modifier['variation']}} 
 		                            @if(!empty($modifier['sub_sku'])), {{$modifier['sub_sku']}} @endif 
-		                            @if(!empty($modifier['sell_line_note']))({{$modifier['sell_line_note']}}) @endif 
+		                            @if(!empty($modifier['sell_line_note']))({!!$modifier['sell_line_note']!!}) @endif 
 		                        </td>
 								<td class="text-right">
 									{{$modifier['quantity']}} {{$modifier['units']}}
@@ -214,3 +233,9 @@
 		</tr>
 	</tbody>
 </table>
+
+<style type="text/css">
+	body {
+		color: #000000;
+	}
+</style>

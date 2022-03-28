@@ -86,7 +86,6 @@ return [
     'brand' => 'Merek',
     'tax_rate' => 'Tarif Pajak',
     'unit' => 'Satuan',
-    'expense.access' => 'Akses biaya',
     'access_locations' =>'Akses lokasi',
     'all_locations' => 'Semua lokasi',
     'dashboard' => 'Beranda',

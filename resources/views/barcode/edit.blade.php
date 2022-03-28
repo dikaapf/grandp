@@ -49,7 +49,7 @@
                 <span class="glyphicon glyphicon-arrow-up" aria-hidden="true"></span>
               </span>
               {!! Form::number('top_margin', $barcode->top_margin, ['class' => 'form-control',
-              'placeholder' => __('barcode.top_margin'), 'min' => 0, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.top_margin'), 'min' => 0, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -61,7 +61,7 @@
                 <span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span>
               </span>
               {!! Form::number('left_margin', $barcode->left_margin, ['class' => 'form-control',
-              'placeholder' => __('barcode.left_margin'), 'min' => 0, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.left_margin'), 'min' => 0, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -74,7 +74,7 @@
                 <i class="fa fa-text-width" aria-hidden="true"></i>
               </span>
               {!! Form::number('width', $barcode->width, ['class' => 'form-control',
-              'placeholder' => __('barcode.width'), 'min' => 0.1, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.width'), 'min' => 0.1, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -86,7 +86,7 @@
                 <i class="fa fa-text-height" aria-hidden="true"></i>
               </span>
               {!! Form::number('height', $barcode->height, ['class' => 'form-control',
-              'placeholder' => __('barcode.height'), 'min' => 0.1, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.height'), 'min' => 0.1, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -99,7 +99,7 @@
                 <i class="fa fa-text-width" aria-hidden="true"></i>
               </span>
               {!! Form::number('paper_width', $barcode->paper_width, ['class' => 'form-control',
-              'placeholder' => __('barcode.paper_width'), 'min' => 0.1, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.paper_width'), 'min' => 0.1, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -111,7 +111,7 @@
                 <i class="fa fa-text-height" aria-hidden="true"></i>
               </span>
               {!! Form::number('paper_height', $barcode->paper_height, ['class' => 'form-control',
-              'placeholder' => __('barcode.paper_height'), 'min' => 0.1, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.paper_height'), 'min' => 0.1, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -136,7 +136,7 @@
                 <span class="glyphicon glyphicon-resize-vertical" aria-hidden="true"></span>
               </span>
               {!! Form::number('row_distance', $barcode->row_distance, ['class' => 'form-control',
-              'placeholder' => __('barcode.row_distance'), 'min' => 0, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.row_distance'), 'min' => 0, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@
                 <span class="glyphicon glyphicon-resize-horizontal" aria-hidden="true"></span>
               </span>
               {!! Form::number('col_distance', $barcode->col_distance, ['class' => 'form-control',
-              'placeholder' => __('barcode.col_distance'), 'min' => 0, 'step' => 0.01, 'required']); !!}
+              'placeholder' => __('barcode.col_distance'), 'min' => 0, 'step' => 0.00001, 'required']); !!}
             </div>
           </div>
         </div>

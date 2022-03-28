@@ -53,7 +53,7 @@ class SellReturnController extends Controller
      */
     public function index()
     {
-        if (!auth()->user()->can('access_sell_return')) {
+        if (!auth()->user()->can('access_sell_return') && !auth()->user()->can('access_own_sell_return')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -98,6 +98,10 @@ class SellReturnController extends Controller
             $permitted_locations = auth()->user()->permitted_locations();
             if ($permitted_locations != 'all') {
                 $sells->whereIn('transactions.location_id', $permitted_locations);
+            }
+
+            if (!auth()->user()->can('access_sell_return') && auth()->user()->can('access_own_sell_return')) {
+                $sells->where('transactions.created_by', request()->session()->get('user.id'));
             }
 
             //Add condition for created_by,used in sales representative sales report
@@ -221,7 +225,7 @@ class SellReturnController extends Controller
      */
     public function add($id)
     {
-        if (!auth()->user()->can('access_sell_return')) {
+        if (!auth()->user()->can('access_sell_return') && !auth()->user()->can('access_own_sell_return')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -256,7 +260,7 @@ class SellReturnController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->can('access_sell_return')) {
+        if (!auth()->user()->can('access_sell_return') && !auth()->user()->can('access_own_sell_return')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -312,12 +316,12 @@ class SellReturnController extends Controller
      */
     public function show($id)
     {
-        if (!auth()->user()->can('access_sell_return')) {
+        if (!auth()->user()->can('access_sell_return') && !auth()->user()->can('access_own_sell_return')) {
             abort(403, 'Unauthorized action.');
         }
 
         $business_id = request()->session()->get('user.business_id');
-        $sell = Transaction::where('business_id', $business_id)
+        $query = Transaction::where('business_id', $business_id)
                                 ->where('id', $id)
                                 ->with(
                                     'contact',
@@ -330,8 +334,12 @@ class SellReturnController extends Controller
                                     'sell_lines.product',
                                     'sell_lines.product.unit',
                                     'location'
-                                )
-                                ->first();
+                                );
+
+        if (!auth()->user()->can('access_sell_return') && auth()->user()->can('access_own_sell_return')) {
+            $sells->where('created_by', request()->session()->get('user.id'));
+        }
+        $sell = $query->first();
 
         foreach ($sell->sell_lines as $key => $value) {
             if (!empty($value->sub_unit_id)) {
@@ -380,7 +388,7 @@ class SellReturnController extends Controller
      */
     public function destroy($id)
     {
-        if (!auth()->user()->can('access_sell_return')) {
+        if (!auth()->user()->can('access_sell_return') && !auth()->user()->can('access_own_sell_return')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -390,11 +398,15 @@ class SellReturnController extends Controller
                 //Begin transaction
                 DB::beginTransaction();
 
-                $sell_return = Transaction::where('id', $id)
+                $query = Transaction::where('id', $id)
                     ->where('business_id', $business_id)
                     ->where('type', 'sell_return')
-                    ->with(['sell_lines', 'payment_lines'])
-                    ->first();
+                    ->with(['sell_lines', 'payment_lines']);
+
+                if (!auth()->user()->can('access_sell_return') && auth()->user()->can('access_own_sell_return')) {
+                    $sells->where('created_by', request()->session()->get('user.id'));
+                }
+                $sell_return = $query->first();
 
                 $sell_lines = TransactionSellLine::where('transaction_id', 
                                             $sell_return->return_parent_id)
@@ -487,10 +499,12 @@ class SellReturnController extends Controller
             $receipt_details = $this->transactionUtil->getReceiptDetails($transaction_id, $location_id, $invoice_layout, $business_details, $location_details, $receipt_printer_type);
             
             //If print type browser - return the content, printer - return printer config data, and invoice format config
+            $output['print_title'] = $receipt_details->invoice_no;
             if ($receipt_printer_type == 'printer') {
                 $output['print_type'] = 'printer';
                 $output['printer_config'] = $this->businessUtil->printerConfig($business_id, $location_details->printer_id);
                 $output['data'] = $receipt_details;
+                
             } else {
                 $output['html_content'] = view('sell_return.receipt', compact('receipt_details'))->render();
             }

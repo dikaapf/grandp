@@ -9,10 +9,10 @@
     </div>
 
     <div class="modal-body">
+
             <div class="form-group">
-                <strong>@lang('account.selected_account')</strong>: 
-                {{$from_account->name}}
-                {!! Form::hidden('from_account', $from_account->id) !!}
+                {!! Form::label('from_account', __( 'lang_v1.transfer_from' ) .":*") !!}
+                {!! Form::select('from_account', $to_accounts, $from_account->id, ['class' => 'form-control', 'required' ]); !!}
             </div>
 
             <div class="form-group">
@@ -26,9 +26,9 @@
             </div>
 
             <div class="form-group">
-                {!! Form::label('operation_date', __( 'messages.date' ) .":*") !!}
-                <div class="input-group date" id='od_datetimepicker'>
-                  {!! Form::text('operation_date', 0, ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ) ]); !!}
+                {!! Form::label('od_datetimepicker', __( 'messages.date' ) .":*") !!}
+                <div class="input-group">
+                  {!! Form::text('operation_date', null, ['class' => 'form-control', 'required','placeholder' => __( 'messages.date' ), 'id' => 'od_datetimepicker' ]); !!}
                   <span class="input-group-addon">
                     <span class="glyphicon glyphicon-calendar"></span>
                   </span>

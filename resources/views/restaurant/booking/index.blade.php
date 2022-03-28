@@ -353,7 +353,7 @@
                 rules: {
                     contact_id: {
                         remote: {
-                            url: '/contacts/check-contact-id',
+                            url: '/contacts/check-contacts-id',
                             type: 'post',
                             data: {
                                 contact_id: function() {

@@ -11,6 +11,7 @@ use Illuminate\Console\Command;
 
 use App\Utils\TransactionUtil;
 use DB;
+use App\Utils\BusinessUtil;
 
 class MapPurchaseSell extends Command
 {
@@ -35,11 +36,12 @@ class MapPurchaseSell extends Command
      *
      * @return void
      */
-    public function __construct(TransactionUtil $transactionUtil)
+    public function __construct(TransactionUtil $transactionUtil, BusinessUtil $businessUtil)
     {
         parent::__construct();
 
         $this->transactionUtil = $transactionUtil;
+        $this->businessUtil = $businessUtil;
     }
 
     /**
@@ -89,11 +91,14 @@ class MapPurchaseSell extends Command
                                     ->orderBy('created_at', 'asc')
                                     ->get();
 
+                $pos_settings = empty($business->pos_settings) ? $this->businessUtil->defaultPosSettings() : json_decode($business->pos_settings, true);
+                $pos_settings['allow_overselling'] = 1; 
                 //Iterate through all transaction and add mapping. First go throught sell_lines having lot number.
                 foreach ($transactions as $transaction) {
                     $business_formatted = ['id' => $business->id,
                                 'accounting_method' => $business->accounting_method,
-                                'location_id' => $transaction->location_id
+                                'location_id' => $transaction->location_id,
+                                'pos_settings' => $pos_settings
                             ];
 
                     foreach ($transaction->sell_lines as $line) {
@@ -107,7 +112,8 @@ class MapPurchaseSell extends Command
                 foreach ($transactions as $transaction) {
                     $business_formatted = ['id' => $business->id,
                                 'accounting_method' => $business->accounting_method,
-                                'location_id' => $transaction->location_id
+                                'location_id' => $transaction->location_id,
+                                'pos_settings' => $pos_settings
                             ];
 
                     foreach ($transaction->sell_lines as $line) {

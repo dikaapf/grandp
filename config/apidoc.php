@@ -137,7 +137,7 @@ return [
              * Note that the route must be referenced by name here (wildcards are supported).
              */
             'exclude' => [
-                // 'users.create', 'admin.*'
+                'new_product', 'new_sell', 'new_contactapi'
             ],
 
             /*

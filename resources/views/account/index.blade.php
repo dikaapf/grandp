@@ -77,10 +77,18 @@
                                                 <th>@lang('account.account_number')</th>
                                                 <th>@lang( 'brand.note' )</th>
                                                 <th>@lang('lang_v1.balance')</th>
+                                                <th>@lang('lang_v1.account_details')</th>
                                                 <th>@lang('lang_v1.added_by')</th>
                                                 <th>@lang( 'messages.action' )</th>
                                             </tr>
                                         </thead>
+                                        <tfoot>
+                                            <tr class="bg-gray font-17 footer-total text-center">
+                                                <td colspan="5"><strong>@lang('sale.total'):</strong></td>
+                                                <td class="footer_total_balance"></td>
+                                                <td colspan="3"></td>
+                                            </tr>
+                                        </tfoot>
                                     </table>
                                 </div>
                             </div>
@@ -285,7 +293,7 @@
                             }
                         },
                         columnDefs:[{
-                                "targets": 7,
+                                "targets": [6,8],
                                 "orderable": false,
                                 "searchable": false
                             }],
@@ -296,11 +304,20 @@
                             {data: 'account_number', name: 'accounts.account_number'},
                             {data: 'note', name: 'accounts.note'},
                             {data: 'balance', name: 'balance', searchable: false},
+                            {data: 'account_details', name: 'account_details'},
                             {data: 'added_by', name: 'u.first_name'},
                             {data: 'action', name: 'action'}
                         ],
                         "fnDrawCallback": function (oSettings) {
                             __currency_convert_recursively($('#other_account_table'));
+                        },
+                        "footerCallback": function ( row, data, start, end, display ) {
+                            var footer_total_balance = 0;
+                            for (var r in data){
+                                footer_total_balance += $(data[r].balance).data('orig-value') ? parseFloat($(data[r].balance).data('orig-value')) : 0;
+                            }
+                            
+                            $('.footer_total_balance').html(__currency_trans_from_en(footer_total_balance));
                         }
                     });
 

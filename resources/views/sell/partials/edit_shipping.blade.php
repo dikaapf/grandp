@@ -3,7 +3,7 @@
 	<div class="modal-content">
 		<div class="modal-header">
 			<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-			<h4 class="modal-title">@lang('lang_v1.edit_shipping') - {{$transaction->invoice_no}}</h4>
+			<h4 class="modal-title">@lang('lang_v1.edit_shipping') - @if($transaction->type == 'purchase_order') {{$transaction->ref_no}} @else {{$transaction->invoice_no}} @endif</h4>
 		</div>
 		<div class="modal-body">
 			<div class="row">
@@ -133,6 +133,13 @@
 				        </div>
 				    </div>
 		        @endif
+		        <div class="clearfix"></div>
+		        <div class="col-md-12">
+			        <div class="form-group">
+			            {!! Form::label('shipping_note', __('lang_v1.shipping_note') . ':' ) !!}
+			            {!! Form::textarea('shipping_note', null, ['class' => 'form-control','placeholder' => __('lang_v1.shipping_note') ,'rows' => '4']); !!}
+			        </div>
+			    </div>
 		        <div class="col-md-12">
 		        	<div class="form-group">
                         <label for="fileupload">
@@ -153,6 +160,14 @@
                     @include('sell.partials.media_table', ['medias' => $medias, 'delete' => true])
 		        </div>
 			</div>
+			@if(!empty($activities))
+			  <div class="row">
+			    <div class="col-md-12">
+			          <strong>{{ __('lang_v1.activities') }}:</strong><br>
+			          @includeIf('activity_log.activities', ['activity_type' => 'sell'])
+			      </div>
+			  </div>
+			  @endif
 		</div>
 		<div class="modal-footer">
 			<button type="submit" class="btn btn-primary">@lang('messages.update')</button>

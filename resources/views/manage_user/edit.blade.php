@@ -127,7 +127,7 @@
                     <div class="checkbox">
                       <label>
                         {!! Form::checkbox('location_permissions[]', 'location.' . $location->id, is_array($permitted_locations) && in_array($location->id, $permitted_locations), 
-                        [ 'class' => 'input-icheck']); !!} {{ $location->name }}
+                        [ 'class' => 'input-icheck']); !!} {{ $location->name }} @if(!empty($location->location_id))({{ $location->location_id}}) @endif
                       </label>
                     </div>
                 </div>
@@ -169,9 +169,9 @@
             
             <div class="col-sm-4 selected_contacts_div @if(!$user->selected_contacts) hide @endif">
                 <div class="form-group">
-                  {!! Form::label('selected_contacts', __('lang_v1.selected_contacts') . ':') !!}
+                  {!! Form::label('user_allowed_contacts', __('lang_v1.selected_contacts') . ':') !!}
                     <div class="form-group">
-                      {!! Form::select('selected_contact_ids[]', $contacts, $contact_access, ['class' => 'form-control select2', 'multiple', 'style' => 'width: 100%;' ]); !!}
+                      {!! Form::select('selected_contact_ids[]', $contact_access, array_keys($contact_access), ['class' => 'form-control select2', 'multiple', 'style' => 'width: 100%;', 'id' => 'user_allowed_contacts' ]); !!}
                     </div>
                 </div>
             </div>
@@ -186,8 +186,8 @@
       @endforeach
     @endif
     <div class="row">
-        <div class="col-md-12">
-            <button type="submit" class="btn btn-primary pull-right" id="submit_user_button">@lang( 'messages.update' )</button>
+        <div class="col-md-12 text-center">
+            <button type="submit" class="btn btn-primary btn-big" id="submit_user_button">@lang( 'messages.update' )</button>
         </div>
     </div>
     {!! Form::close() !!}
@@ -208,6 +208,39 @@
     });
     $('#allow_login').on('ifUnchecked', function(event){
       $('div.user_auth_fields').addClass('hide');
+    });
+
+    $('#user_allowed_contacts').select2({
+        ajax: {
+            url: '/contacts/customers',
+            dataType: 'json',
+            delay: 250,
+            data: function(params) {
+                return {
+                    q: params.term, // search term
+                    page: params.page,
+                    all_contact: true
+                };
+            },
+            processResults: function(data) {
+                return {
+                    results: data,
+                };
+            },
+        },
+        templateResult: function (data) { 
+            var template = '';
+            if (data.supplier_business_name) {
+                template += data.supplier_business_name + "<br>";
+            }
+            template += data.text + "<br>" + LANG.mobile + ": " + data.mobile;
+
+            return  template;
+        },
+        minimumInputLength: 1,
+        escapeMarkup: function(markup) {
+            return markup;
+        },
     });
   });
 

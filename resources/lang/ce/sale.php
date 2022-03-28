@@ -56,4 +56,7 @@
 "sale_date" => "Verkaufsdatum",
 "list_pos" => "Liste POS",
 "edit_sale" => "Verkauf bearbeiten",
+"shipping"=>"船运",
+"shipping_details"=>"送货细节",
+"shipping_charges"=>"运输费用",
 ];

@@ -63,7 +63,6 @@
 "brand" => "العلامة التجارية",
 "tax_rate" => "معدل الضريبة",
 "unit" => "الوحدة",
-"expense.access" => "الوصول إلى المصاريف",
 "access_locations" => "عرض الفروع",
 "all_locations" => "كل الفروع",
 "dashboard" => "الرئيسية",

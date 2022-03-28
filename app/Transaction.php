@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
-    //Transaction types = ['purchase','sell','expense','stock_adjustment','sell_transfer','purchase_transfer','opening_stock','sell_return','opening_balance','purchase_return', 'payroll', 'expense_refund']
+    //Transaction types = ['purchase','sell','expense','stock_adjustment','sell_transfer','purchase_transfer','opening_stock','sell_return','opening_balance','purchase_return', 'payroll', 'expense_refund', 'sales_order', 'purchase_order']
 
     //Transaction status = ['received','pending','ordered','draft','final', 'in_transit', 'completed']
 
@@ -17,6 +17,17 @@ class Transaction extends Model
      * @var array
      */
     protected $guarded = ['id'];
+
+    /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'purchase_order_ids' => 'array',
+        'sales_order_ids' => 'array',
+        'export_custom_fields_info' => 'array',
+    ];
 
     /**
      * The table associated with the model.
@@ -68,6 +79,11 @@ class Transaction extends Model
     public function sales_person()
     {
         return $this->belongsTo(\App\User::class, 'created_by');
+    }
+
+    public function sale_commission_agent()
+    {
+        return $this->belongsTo(\App\User::class, 'commission_agent');
     }
 
     public function return_parent()
@@ -236,6 +252,15 @@ class Transaction extends Model
     }
 
     /**
+     * Returns preferred account for payment.
+     * Used in download pdfs
+     */
+    public function preferredAccount()
+    {
+        return $this->belongsTo(\App\Account::class, 'prefer_payment_account');
+    }
+    
+    /**
      * Returns the list of discount types.
      */
     public static function discountTypes()
@@ -279,10 +304,11 @@ class Transaction extends Model
      */
     public function getDueDateAttribute()
     {
-        $due_date = null;
+        $transaction_date = \Carbon::parse($this->transaction_date);
         if (!empty($this->pay_term_type) && !empty($this->pay_term_number)) {
-            $transaction_date = \Carbon::parse($this->transaction_date);
             $due_date = $this->pay_term_type == 'days' ? $transaction_date->addDays($this->pay_term_number) : $transaction_date->addMonths($this->pay_term_number);
+        } else {
+            $due_date = $transaction_date->addDays(0);
         }
 
         return $due_date;
@@ -322,5 +348,53 @@ class Transaction extends Model
                     ->whereNotNull('transactions.pay_term_number')
                     ->whereNotNull('transactions.pay_term_type')
                     ->whereRaw("IF(transactions.pay_term_type='days', DATE_ADD(transactions.transaction_date, INTERVAL transactions.pay_term_number DAY) < CURDATE(), DATE_ADD(transactions.transaction_date, INTERVAL transactions.pay_term_number MONTH) < CURDATE())");
+    }
+
+    public static function sell_statuses()
+    {
+        return [
+            'final' => __('sale.final'), 
+            'draft' => __('sale.draft'), 
+            'quotation' => __('lang_v1.quotation'), 
+            'proforma' => __('lang_v1.proforma')
+        ];
+    }
+
+    public static function sales_order_statuses($only_key_value = false)
+    {
+        if ($only_key_value) {
+           return [
+                'ordered' => __('lang_v1.ordered'),
+                'partial' => __('lang_v1.partial'),
+                'completed' => __('restaurant.completed')
+            ];
+        }
+        return [
+            'ordered' => [
+                'label' => __('lang_v1.ordered'),
+                'class' => 'bg-info'
+            ],
+            'partial' => [
+                'label' => __('lang_v1.partial'),
+                'class' => 'bg-yellow'
+            ],
+            'completed' => [
+                'label' => __('restaurant.completed'),
+                'class' => 'bg-green'
+            ]
+        ];
+    }
+
+    public function salesOrders()
+    {
+        $sales_orders = null;
+        if (!empty($this->sales_order_ids)) {
+            $sales_orders = Transaction::where('business_id', $this->business_id)
+                                ->where('type', 'sales_order')
+                                ->whereIn('id', $this->sales_order_ids)
+                                ->get();
+        }
+        
+        return $sales_orders;
     }
 }

@@ -287,7 +287,8 @@ class ProductController extends Controller
         $brands = Brands::forDropdown($business_id);
 
         $units = Unit::forDropdown($business_id);
-
+        $list_type = Tipe::forDropdown($business_id);
+        
         $tax_dropdown = TaxRate::forBusinessDropdown($business_id, false);
         $taxes = $tax_dropdown['tax_rates'];
 
@@ -311,6 +312,7 @@ class ProductController extends Controller
                 'categories',
                 'brands',
                 'units',
+                'list_type',
                 'taxes',
                 'business_locations',
                 'show_manufacturing_data',

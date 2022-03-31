@@ -3,6 +3,9 @@
 
 @section('content')
 
+@php
+  $custom_labels = json_decode(session('business.custom_labels'), true);
+@endphp
 <!-- Content Header (Page header) -->
 <section class="content-header">
     <h1>@lang('purchase.edit_purchase') <i class="fa fa-keyboard-o hover-q text-muted" aria-hidden="true" data-container="body" data-toggle="popover" data-placement="bottom" data-content="@include('purchase.partials.keyboard_shortcuts_details')" data-html="true" data-trigger="hover" data-original-title="" title=""></i></h1>
@@ -127,11 +130,103 @@
                 </div>
             </div>
         </div>
+        <div class="row">
+          @php
+            $custom_field_1_label = !empty($custom_labels['purchase']['custom_field_1']) ? $custom_labels['purchase']['custom_field_1'] : '';
+
+            $is_custom_field_1_required = !empty($custom_labels['purchase']['is_custom_field_1_required']) && $custom_labels['purchase']['is_custom_field_1_required'] == 1 ? true : false;
+
+            $custom_field_2_label = !empty($custom_labels['purchase']['custom_field_2']) ? $custom_labels['purchase']['custom_field_2'] : '';
+
+            $is_custom_field_2_required = !empty($custom_labels['purchase']['is_custom_field_2_required']) && $custom_labels['purchase']['is_custom_field_2_required'] == 1 ? true : false;
+
+            $custom_field_3_label = !empty($custom_labels['purchase']['custom_field_3']) ? $custom_labels['purchase']['custom_field_3'] : '';
+
+            $is_custom_field_3_required = !empty($custom_labels['purchase']['is_custom_field_3_required']) && $custom_labels['purchase']['is_custom_field_3_required'] == 1 ? true : false;
+
+            $custom_field_4_label = !empty($custom_labels['purchase']['custom_field_4']) ? $custom_labels['purchase']['custom_field_4'] : '';
+
+            $is_custom_field_4_required = !empty($custom_labels['purchase']['is_custom_field_4_required']) && $custom_labels['purchase']['is_custom_field_4_required'] == 1 ? true : false;
+        @endphp
+        @if(!empty($custom_field_1_label))
+          @php
+            $label_1 = $custom_field_1_label . ':';
+            if($is_custom_field_1_required) {
+              $label_1 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('custom_field_1', $label_1 ) !!}
+                    {!! Form::text('custom_field_1', $purchase->custom_field_1, ['class' => 'form-control','placeholder' => $custom_field_1_label, 'required' => $is_custom_field_1_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($custom_field_2_label))
+          @php
+            $label_2 = $custom_field_2_label . ':';
+            if($is_custom_field_2_required) {
+              $label_2 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('custom_field_2', $label_2 ) !!}
+                    {!! Form::text('custom_field_2', $purchase->custom_field_2, ['class' => 'form-control','placeholder' => $custom_field_2_label, 'required' => $is_custom_field_2_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($custom_field_3_label))
+          @php
+            $label_3 = $custom_field_3_label . ':';
+            if($is_custom_field_3_required) {
+              $label_3 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('custom_field_3', $label_3 ) !!}
+                    {!! Form::text('custom_field_3', $purchase->custom_field_3, ['class' => 'form-control','placeholder' => $custom_field_3_label, 'required' => $is_custom_field_3_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($custom_field_4_label))
+          @php
+            $label_4 = $custom_field_4_label . ':';
+            if($is_custom_field_4_required) {
+              $label_4 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('custom_field_4', $label_4 ) !!}
+                    {!! Form::text('custom_field_4', $purchase->custom_field_4, ['class' => 'form-control','placeholder' => $custom_field_4_label, 'required' => $is_custom_field_4_required]); !!}
+                </div>
+            </div>
+        @endif
+        </div>
+        @if(!empty($common_settings['enable_purchase_order']))
+        <div class="row">
+          <div class="col-sm-3">
+            <div class="form-group">
+              {!! Form::label('purchase_order_ids', __('lang_v1.purchase_order').':') !!}
+              {!! Form::select('purchase_order_ids[]', $purchase_orders, $purchase->purchase_order_ids, ['class' => 'form-control select2', 'multiple', 'id' => 'purchase_order_ids']); !!}
+            </div>
+          </div>
+        </div>
+        @endif
     @endcomponent
 
     @component('components.widget', ['class' => 'box-primary'])
         <div class="row">
-            <div class="col-sm-8 col-sm-offset-2">
+            <div class="col-sm-2 text-center">
+              <button type="button" class="btn btn-primary btn-flat" data-toggle="modal" data-target="#import_purchase_products_modal">@lang('product.import_products')</button>
+            </div>
+            <div class="col-sm-8">
               <div class="form-group">
                 <div class="input-group">
                   <span class="input-group-addon">
@@ -239,33 +334,6 @@
                       <span id="tax_calculated_amount" class="display_currency">0</span>
                     </td>
                   </tr>
-
-                  <tr>
-                    <td>
-                      <div class="form-group">
-                      {!! Form::label('shipping_details', __( 'purchase.shipping_details' ) . ':') !!}
-                      {!! Form::text('shipping_details', $purchase->shipping_details, ['class' => 'form-control']); !!}
-                      </div>
-                    </td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>
-                      <div class="form-group">
-                      {!! Form::label('shipping_charges','(+) ' . __( 'purchase.additional_shipping_charges') . ':') !!}
-                      {!! Form::text('shipping_charges', number_format($purchase->shipping_charges/$purchase->exchange_rate, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input_number']); !!}
-                      </div>
-                    </td>
-                  </tr>
-
-                  <tr>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>&nbsp;</td>
-                    <td>
-                      {!! Form::hidden('final_total', $purchase->final_total , ['id' => 'grand_total_hidden']); !!}
-                      <b>@lang('purchase.purchase_total'): </b><span id="grand_total" class="display_currency" data-currency_symbol='true'>{{$purchase->final_total}}</span>
-                    </td>
-                  </tr>
                   <tr>
                     <td colspan="4">
                       <div class="form-group">
@@ -279,10 +347,181 @@
             </div>
         </div>
     @endcomponent
+    @component('components.widget', ['class' => 'box-primary'])
+    <div class="row">
+      <div class="col-md-4">
+        <div class="form-group">
+        {!! Form::label('shipping_details', __( 'purchase.shipping_details' ) . ':') !!}
+        {!! Form::text('shipping_details', $purchase->shipping_details, ['class' => 'form-control']); !!}
+        </div>
+      </div>
+      <div class="col-md-4 col-md-offset-4">
+        <div class="form-group">
+          {!! Form::label('shipping_charges','(+) ' . __( 'purchase.additional_shipping_charges') . ':') !!}
+          {!! Form::text('shipping_charges', number_format($purchase->shipping_charges/$purchase->exchange_rate, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input_number']); !!}
+          </div>
+      </div>
+    </div>
+    <div class="row">
+          @php
+            $shipping_custom_label_1 = !empty($custom_labels['purchase_shipping']['custom_field_1']) ? $custom_labels['purchase_shipping']['custom_field_1'] : '';
+
+            $is_shipping_custom_field_1_required = !empty($custom_labels['purchase_shipping']['is_custom_field_1_required']) && $custom_labels['purchase_shipping']['is_custom_field_1_required'] == 1 ? true : false;
+
+            $shipping_custom_label_2 = !empty($custom_labels['purchase_shipping']['custom_field_2']) ? $custom_labels['purchase_shipping']['custom_field_2'] : '';
+
+            $is_shipping_custom_field_2_required = !empty($custom_labels['purchase_shipping']['is_custom_field_2_required']) && $custom_labels['purchase_shipping']['is_custom_field_2_required'] == 1 ? true : false;
+
+            $shipping_custom_label_3 = !empty($custom_labels['purchase_shipping']['custom_field_3']) ? $custom_labels['purchase_shipping']['custom_field_3'] : '';
+            
+            $is_shipping_custom_field_3_required = !empty($custom_labels['purchase_shipping']['is_custom_field_3_required']) && $custom_labels['purchase_shipping']['is_custom_field_3_required'] == 1 ? true : false;
+
+            $shipping_custom_label_4 = !empty($custom_labels['purchase_shipping']['custom_field_4']) ? $custom_labels['purchase_shipping']['custom_field_4'] : '';
+            
+            $is_shipping_custom_field_4_required = !empty($custom_labels['purchase_shipping']['is_custom_field_4_required']) && $custom_labels['purchase_shipping']['is_custom_field_4_required'] == 1 ? true : false;
+
+            $shipping_custom_label_5 = !empty($custom_labels['purchase_shipping']['custom_field_5']) ? $custom_labels['purchase_shipping']['custom_field_5'] : '';
+            
+            $is_shipping_custom_field_5_required = !empty($custom_labels['purchase_shipping']['is_custom_field_5_required']) && $custom_labels['purchase_shipping']['is_custom_field_5_required'] == 1 ? true : false;
+        @endphp
+
+        @if(!empty($shipping_custom_label_1))
+          @php
+            $label_1 = $shipping_custom_label_1 . ':';
+            if($is_shipping_custom_field_1_required) {
+              $label_1 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('shipping_custom_field_1', $label_1 ) !!}
+                    {!! Form::text('shipping_custom_field_1', $purchase->shipping_custom_field_1 ?? null, ['class' => 'form-control','placeholder' => $shipping_custom_label_1, 'required' => $is_shipping_custom_field_1_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($shipping_custom_label_2))
+          @php
+            $label_2 = $shipping_custom_label_2 . ':';
+            if($is_shipping_custom_field_2_required) {
+              $label_2 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('shipping_custom_field_2', $label_2 ) !!}
+                    {!! Form::text('shipping_custom_field_2', $purchase->shipping_custom_field_2 ?? null, ['class' => 'form-control','placeholder' => $shipping_custom_label_2, 'required' => $is_shipping_custom_field_2_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($shipping_custom_label_3))
+          @php
+            $label_3 = $shipping_custom_label_3 . ':';
+            if($is_shipping_custom_field_3_required) {
+              $label_3 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('shipping_custom_field_3', $label_3 ) !!}
+                    {!! Form::text('shipping_custom_field_3', $purchase->shipping_custom_field_3 ?? null, ['class' => 'form-control','placeholder' => $shipping_custom_label_3, 'required' => $is_shipping_custom_field_3_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($shipping_custom_label_4))
+          @php
+            $label_4 = $shipping_custom_label_4 . ':';
+            if($is_shipping_custom_field_4_required) {
+              $label_4 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('shipping_custom_field_4', $label_4 ) !!}
+                    {!! Form::text('shipping_custom_field_4', $purchase->shipping_custom_field_4 ?? null, ['class' => 'form-control','placeholder' => $shipping_custom_label_4, 'required' => $is_shipping_custom_field_4_required]); !!}
+                </div>
+            </div>
+        @endif
+        @if(!empty($shipping_custom_label_5))
+          @php
+            $label_5 = $shipping_custom_label_5 . ':';
+            if($is_shipping_custom_field_5_required) {
+              $label_5 .= '*';
+            }
+          @endphp
+
+          <div class="col-md-4">
+                <div class="form-group">
+                    {!! Form::label('shipping_custom_field_5', $label_5 ) !!}
+                    {!! Form::text('shipping_custom_field_5', $purchase->shipping_custom_field_5 ?? null, ['class' => 'form-control','placeholder' => $shipping_custom_label_5, 'required' => $is_shipping_custom_field_5_required]); !!}
+                </div>
+            </div>
+        @endif
+        </div>
+
+    <div class="row">
+      <div class="col-md-12 text-center">
+        <button type="button" class="btn btn-primary btn-sm" id="toggle_additional_expense"> <i class="fas fa-plus"></i> @lang('lang_v1.add_additional_expenses') <i class="fas fa-chevron-down"></i></button>
+      </div>
+      <div class="col-md-8 col-md-offset-4" id="additional_expenses_div">
+        <table class="table table-condensed">
+          <thead>
+            <tr>
+              <th>@lang('lang_v1.additional_expense_name')</th>
+              <th>@lang('sale.amount')</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                {!! Form::text('additional_expense_key_1', $purchase->additional_expense_key_1, ['class' => 'form-control', 'id' => 'additional_expense_key_1']); !!}
+              </td>
+              <td>
+                {!! Form::text('additional_expense_value_1', number_format($purchase->additional_expense_value_1/$purchase->exchange_rate, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_1']); !!}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                {!! Form::text('additional_expense_key_2', $purchase->additional_expense_key_2, ['class' => 'form-control', 'id' => 'additional_expense_key_2']); !!}
+              </td>
+              <td>
+                {!! Form::text('additional_expense_value_2', number_format($purchase->additional_expense_value_2/$purchase->exchange_rate, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_2']); !!}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                {!! Form::text('additional_expense_key_3', $purchase->additional_expense_key_3, ['class' => 'form-control', 'id' => 'additional_expense_key_3']); !!}
+              </td>
+              <td>
+                {!! Form::text('additional_expense_value_3', number_format($purchase->additional_expense_value_3/$purchase->exchange_rate, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_3']); !!}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                {!! Form::text('additional_expense_key_4', $purchase->additional_expense_key_4, ['class' => 'form-control', 'id' => 'additional_expense_key_4']); !!}
+              </td>
+              <td>
+                {!! Form::text('additional_expense_value_4', number_format($purchase->additional_expense_value_4/$purchase->exchange_rate, $currency_precision, $currency_details->decimal_separator, $currency_details->thousand_separator), ['class' => 'form-control input_number', 'id' => 'additional_expense_value_4']); !!}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="row">
+    <div class="col-md-12 text-right">
+      {!! Form::hidden('final_total', $purchase->final_total , ['id' => 'grand_total_hidden']); !!}
+      <b>@lang('purchase.purchase_total'): </b><span id="grand_total" class="display_currency" data-currency_symbol='true'>{{$purchase->final_total}}</span>
+    </div>
+    </div>
+    @endcomponent
   
     <div class="row">
-        <div class="col-sm-12">
-          <button type="button" id="submit_purchase_form" class="btn btn-primary pull-right btn-flat">@lang('messages.update')</button>
+        <div class="col-sm-12 text-center">
+          <button type="button" id="submit_purchase_form" class="btn btn-primary btn-big">@lang('messages.update')</button>
         </div>
     </div>
 {!! Form::close() !!}
@@ -293,7 +532,7 @@
 <div class="modal fade contact_modal" tabindex="-1" role="dialog" aria-labelledby="gridSystemModalLabel">
   @include('contact.create', ['quick_add' => true])
 </div>
-
+@include('purchase.partials.import_purchase_products_modal')
 @endsection
 
 @section('javascript')

@@ -31,6 +31,7 @@ class GroupTaxController extends Controller
                         &nbsp;
                         <button data-href="{{action(\'GroupTaxController@destroy\', [$id])}}" class="btn btn-xs btn-danger delete_tax_group_button"><i class="glyphicon glyphicon-trash"></i> @lang("messages.delete")</button>'
                 )
+                ->editColumn('amount', '{{@num_format($amount)}}')
                 ->editColumn('sub_taxes', function ($row) {
                     $sub_taxes = [];
                     foreach ($row->sub_taxes as $sub_tax) {

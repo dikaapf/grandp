@@ -63,7 +63,6 @@
 "brand" => "Marque",
 "tax_rate" => "Taux d'imposition",
 "unit" => "Unité",
-"expense.access" => "Accès aux dépenses",
 "access_locations" => "Accès aux lieux",
 "all_locations" => "Tous les emplacements",
 "dashboard" => "Accueil",

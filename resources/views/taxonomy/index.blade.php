@@ -31,7 +31,14 @@
         $cat_code_enabled = isset($module_category_data['enable_taxonomy_code']) && !$module_category_data['enable_taxonomy_code'] ? false : true;
     @endphp
     <input type="hidden" id="category_type" value="{{request()->get('type')}}">
-    @component('components.widget', ['class' => 'box-solid'])
+    @php
+        $can_add = true;
+        if(request()->get('type') == 'product' && !auth()->user()->can('category.create')) {
+            $can_add = false;
+        }
+    @endphp
+    @component('components.widget', ['class' => 'box-solid', 'can_add' => $can_add])
+            @if($can_add)
             @slot('tool')
                 <div class="box-tools">
                     <button type="button" class="btn btn-block btn-primary btn-modal" 
@@ -40,6 +47,7 @@
                     <i class="fa fa-plus"></i> @lang( 'messages.add' )</button>
                 </div>
             @endslot
+            @endif
        
             <div class="table-responsive">
                 <table class="table table-bordered table-striped" id="category_table">

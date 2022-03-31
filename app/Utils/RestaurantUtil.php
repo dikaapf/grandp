@@ -132,12 +132,14 @@ class RestaurantUtil extends Util
      */
     public function getLineOrders($business_id, $filter = [])
     {
-        $query = TransactionSellLine::leftJoin('transactions as t', 't.id', '=', 'transaction_sell_lines.transaction_id')
+        $query = TransactionSellLine::with(['modifiers', 'modifiers.product', 'modifiers.variations'])
+                ->leftJoin('transactions as t', 't.id', '=', 'transaction_sell_lines.transaction_id')
                 ->leftJoin('contacts as c', 't.contact_id', '=', 'c.id')
                 ->leftJoin('variations as v', 'transaction_sell_lines.variation_id', '=', 'v.id')
                 ->leftJoin('products as p', 'v.product_id', '=', 'p.id')
                 ->leftJoin('units as u', 'p.unit_id', '=', 'u.id')
                 ->leftJoin('product_variations as pv', 'v.product_variation_id', '=', 'pv.id')
+                ->leftJoin('users as line_service_staff', 'transaction_sell_lines.res_service_staff_id', '=', 'line_service_staff.id')
                 ->leftjoin(
                     'business_locations AS bl',
                     't.location_id',
@@ -164,7 +166,11 @@ class RestaurantUtil extends Util
         if (!empty($filter['waiter_id'])) {
             $query->where('transaction_sell_lines.res_service_staff_id', $filter['waiter_id']);
         }
-                
+        
+        if (!empty($filter['line_id'])) {
+            $query->where('transaction_sell_lines.id', $filter['line_id']);
+        }
+        
         $orders =  $query->select(
             'p.name as product_name',
             'p.type as product_type',
@@ -177,9 +183,11 @@ class RestaurantUtil extends Util
             't.created_at',
             't.invoice_no',
             'transaction_sell_lines.quantity',
+            'transaction_sell_lines.sell_line_note',
             'transaction_sell_lines.res_line_order_status',
             'u.short_name as unit',
-            'transaction_sell_lines.id'
+            'transaction_sell_lines.id',
+            DB::raw("CONCAT(COALESCE(line_service_staff.surname, ''),' ',COALESCE(line_service_staff.first_name, ''),' ',COALESCE(line_service_staff.last_name,'')) as service_staff_name")
         )
                 ->orderBy('created_at', 'desc')
                 ->get();

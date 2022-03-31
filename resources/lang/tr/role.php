@@ -86,7 +86,6 @@ return [
     'brand' => 'Marka',
     'tax_rate' => 'Vergi oranı',
     'unit' => 'Birim',
-    'expense.access' => 'Giderlere Erişim',
     'access_locations' =>'Şubelere Erişim',
     'all_locations' => 'Tüm Şubeler',
     'dashboard' => 'Ana Sayfa',

@@ -13,24 +13,27 @@
     <div class="row">
         <div class="col-md-12">
             @component('components.filters', ['title' => __('report.filters')])
-                <div class="col-md-3">
-                    <div class="form-group">
-                        {!! Form::label('location_id',  __('purchase.business_location') . ':') !!}
-                        {!! Form::select('location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+                @if(auth()->user()->can('all_expense.access'))
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {!! Form::label('location_id',  __('purchase.business_location') . ':') !!}
+                            {!! Form::select('location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+                        </div>
                     </div>
-                </div>
-                <div class="col-sm-3">
-                    <div class="form-group">
-                        {!! Form::label('expense_for', __('expense.expense_for').':') !!}
-                        {!! Form::select('expense_for', $users, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+
+                    <div class="col-sm-3">
+                        <div class="form-group">
+                            {!! Form::label('expense_for', __('expense.expense_for').':') !!}
+                            {!! Form::select('expense_for', $users, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="form-group">
-                        {!! Form::label('expense_contact_filter',  __('contact.contact') . ':') !!}
-                        {!! Form::select('expense_contact_filter', $contacts, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]); !!}
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            {!! Form::label('expense_contact_filter',  __('contact.contact') . ':') !!}
+                            {!! Form::select('expense_contact_filter', $contacts, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]); !!}
+                        </div>
                     </div>
-                </div>
+                @endif
                 <div class="col-md-3">
                     <div class="form-group">
                         {!! Form::label('expense_category_id',__('expense.expense_category').':') !!}
@@ -56,7 +59,7 @@
     <div class="row">
         <div class="col-md-12">
             @component('components.widget', ['class' => 'box-primary', 'title' => __('expense.all_expenses')])
-                @can('expense.access')
+                @can('expense.add')
                     @slot('tool')
                         <div class="box-tools">
                             <a class="btn btn-block btn-primary" href="{{action('ExpenseController@create')}}">
@@ -87,10 +90,10 @@
                         <tfoot>
                             <tr class="bg-gray font-17 text-center footer-total">
                                 <td colspan="6"><strong>@lang('sale.total'):</strong></td>
-                                <td id="footer_payment_status_count"></td>
+                                <td class="footer_payment_status_count"></td>
                                 <td></td>
-                                <td><span class="display_currency" id="footer_expense_total" data-currency_symbol ="true"></span></td>
-                                <td><span class="display_currency" id="footer_total_due" data-currency_symbol ="true"></span></td>
+                                <td class="footer_expense_total"></td>
+                                <td class="footer_total_due"></td>
                                 <td colspan="4"></td>
                             </tr>
                         </tfoot>

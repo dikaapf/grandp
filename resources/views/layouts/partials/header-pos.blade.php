@@ -41,7 +41,7 @@
             @endif
           @endif
 
-          @if(!empty($transaction->location_id)) {{$transaction->location->name}} @endif &nbsp;{{ @format_datetime('now') }} <i class="fa fa-keyboard hover-q text-muted" aria-hidden="true" data-container="body" data-toggle="popover" data-placement="bottom" data-content="@include('sale_pos.partials.keyboard_shortcuts_details')" data-html="true" data-trigger="hover" data-original-title="" title=""></i>
+          @if(!empty($transaction->location_id)) {{$transaction->location->name}} @endif &nbsp; <span class="curr_datetime">{{ @format_datetime('now') }}</span> <i class="fa fa-keyboard hover-q text-muted" aria-hidden="true" data-container="body" data-toggle="popover" data-placement="bottom" data-content="@include('sale_pos.partials.keyboard_shortcuts_details')" data-html="true" data-trigger="hover" data-original-title="" title=""></i>
         </p>
       </div>
     </div>
@@ -93,6 +93,12 @@
             </a>
           @endcan
         @endif
+        @can('expense.add')
+        <button type="button" title="{{ __('expense.add_expense') }}"   
+          data-placement="bottom" class="btn bg-purple btn-flat m-6 btn-xs m-5 btn-modal pull-right" id="add_expense">
+            <strong><i class="fa fas fa-minus-circle"></i> @lang('expense.add_expense')</strong>
+        </button>
+        @endcan
 
     </div>
     

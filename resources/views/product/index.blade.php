@@ -38,10 +38,10 @@
                 {!! Form::select('unit_id', $units, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'product_list_filter_unit_id', 'placeholder' => __('lang_v1.all')]); !!}
             </div>
         </div>
-        <div class="col-md-3" id="location_filter">
+        <div class="col-md-3">
             <div class="form-group">
-                {!! Form::label('location_id',  __('purchase.business_location') . ':') !!}
-                {!! Form::select('location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]); !!}
+                {!! Form::label('tax_id', __('product.tax') . ':') !!}
+                {!! Form::select('tax_id', $taxes, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'product_list_filter_tax_id', 'placeholder' => __('lang_v1.all')]); !!}
             </div>
         </div>
         <div class="col-md-3">
@@ -50,11 +50,10 @@
                 {!! Form::select('brand_id', $brands, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'product_list_filter_brand_id', 'placeholder' => __('lang_v1.all')]); !!}
             </div>
         </div>
-        
-        <div class="col-md-3">
+        <div class="col-md-3" id="location_filter">
             <div class="form-group">
-                {!! Form::label('list_type', __('product.tax') . ':') !!}
-                {!! Form::select('list_type', $taxes, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'id' => 'product_list_type', 'placeholder' => __('lang_v1.all')]); !!}
+                {!! Form::label('location_id',  __('purchase.business_location') . ':') !!}
+                {!! Form::select('location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%', 'placeholder' => __('lang_v1.all')]); !!}
             </div>
         </div>
         <div class="col-md-3">
@@ -104,10 +103,11 @@
                     <li class="active">
                         <a href="#product_list_tab" data-toggle="tab" aria-expanded="true"><i class="fa fa-cubes" aria-hidden="true"></i> @lang('lang_v1.all_products')</a>
                     </li>
-
+                    @can('stock_report.view')
                     <li>
                         <a href="#product_stock_report" data-toggle="tab" aria-expanded="true"><i class="fa fa-hourglass-half" aria-hidden="true"></i> @lang('report.stock_report')</a>
                     </li>
+                    @endcan
                 </ul>
 
                 <div class="tab-content">
@@ -119,10 +119,11 @@
                         @endcan
                         @include('product.partials.product_list')
                     </div>
-
+                    @can('stock_report.view')
                     <div class="tab-pane" id="product_stock_report">
                         @include('report.partials.stock_report_table')
                     </div>
+                    @endcan
                 </div>
             </div>
         </div>
@@ -142,6 +143,9 @@
     aria-labelledby="gridSystemModalLabel">
 </div>
 
+@if($is_woocommerce)
+    @include('product.partials.toggle_woocommerce_sync_modal')
+@endif
 @include('product.partials.edit_product_location_modal')
 
 </section>
@@ -169,7 +173,6 @@
                         d.brand_id = $('#product_list_filter_brand_id').val();
                         d.unit_id = $('#product_list_filter_unit_id').val();
                         d.tax_id = $('#product_list_filter_tax_id').val();
-                        d.list_type = $('#product_list_type').val();
                         d.active_state = $('#active_state').val();
                         d.not_for_selling = $('#not_for_selling').is(':checked');
                         d.location_id = $('#location_id').val();
@@ -255,6 +258,10 @@
                         detailRows.push( tr.attr('id') );
                     }
                 }
+            });
+
+            $('#opening_stock_modal').on('hidden.bs.modal', function(e) {
+                product_table.ajax.reload();
             });
 
             $('table#product_table tbody').on('click', 'a.delete-product', function(e){
@@ -378,7 +385,7 @@
                 });
             });
 
-            $(document).on('change', '#product_list_filter_type, #product_list_filter_category_id, #product_list_filter_brand_id, #product_list_filter_unit_id, #product_list_filter_tax_id, #product_list_type, #location_id, #active_state, #repair_model_id', 
+            $(document).on('change', '#product_list_filter_type, #product_list_filter_category_id, #product_list_filter_brand_id, #product_list_filter_unit_id, #product_list_filter_tax_id, #location_id, #active_state, #repair_model_id', 
                 function() {
                     if ($("#product_list_tab").hasClass('active')) {
                         product_table.ajax.reload();
@@ -400,9 +407,49 @@
             });
 
             $('#product_location').select2({dropdownParent: $('#product_location').closest('.modal')});
+
+            @if($is_woocommerce)
+                $(document).on('click', '.toggle_woocomerce_sync', function(e){
+                    e.preventDefault();
+                    var selected_rows = getSelectedRows();
+                    if(selected_rows.length > 0){
+                        $('#woocommerce_sync_modal').modal('show');
+                        $("input#woocommerce_products_sync").val(selected_rows);
+                    } else{
+                        $('input#selected_products').val('');
+                        swal('@lang("lang_v1.no_row_selected")');
+                    }    
+                });
+
+                $(document).on('submit', 'form#toggle_woocommerce_sync_form', function(e){
+                    e.preventDefault();
+                    var url = $('form#toggle_woocommerce_sync_form').attr('action');
+                    var method = $('form#toggle_woocommerce_sync_form').attr('method');
+                    var data = $('form#toggle_woocommerce_sync_form').serialize();
+                    var ladda = Ladda.create(document.querySelector('.ladda-button'));
+                    ladda.start();
+                    $.ajax({
+                        method: method,
+                        dataType: "json",
+                        url: url,
+                        data:data,
+                        success: function(result){
+                            ladda.stop();
+                            if (result.success) {
+                                $("input#woocommerce_products_sync").val('');
+                                $('#woocommerce_sync_modal').modal('hide');
+                                toastr.success(result.msg);
+                                product_table.ajax.reload();
+                            } else {
+                                toastr.error(result.msg);
+                            }
+                        }
+                    });
+                });
+            @endif
         });
 
-        $(document).on('shown.bs.modal', 'div.view_product_modal, div.view_modal', 
+        $(document).on('shown.bs.modal', 'div.view_product_modal, div.view_modal, #view_product_modal', 
             function(){
                 var div = $(this).find('#view_product_stock_details');
             if (div.length) {

@@ -40,9 +40,9 @@ class InvoiceSchemeController extends Controller
                 )
                 ->editColumn('prefix', function ($row) {
                     if ($row->scheme_type == 'year') {
-                        return date('Y') . '-';
+                        return $row->prefix.date('Y') . config('constants.invoice_scheme_separator');
                     } else {
-                        return $row->prefix ;
+                        return $row->prefix;
                     }
                 })
                 ->editColumn('name', function ($row) {

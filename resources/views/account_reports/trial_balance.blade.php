@@ -13,7 +13,14 @@
 <section class="content">
     <div class="row no-print">
         <div class="col-sm-12">
-            <div class="col-sm-3 col-xs-6 pull-right">
+            @component('components.filters', ['title' => __('report.filters')])
+            <div class="col-md-3">
+                <div class="form-group">
+                    {!! Form::label('trial_bal_location_id',  __('purchase.business_location') . ':') !!}
+                    {!! Form::select('trial_bal_location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+                </div>
+            </div>
+            <div class="col-sm-3 col-xs-6">
                     <label for="end_date">@lang('messages.filter_by_date'):</label>
                     <div class="input-group">
                         <span class="input-group-addon">
@@ -22,6 +29,7 @@
                         <input type="text" id="end_date" value="{{@format_date('now')}}" class="form-control" readonly>
                     </div>
             </div>
+            @endcomponent
         </div>
     </div>
     <br>
@@ -34,8 +42,8 @@
                 <thead>
                     <tr class="bg-gray">
                         <th>@lang('account.trial_balance')</th>
-                        <th>@lang('account.credit')</th>
                         <th>@lang('account.debit')</th>
+                        <th>@lang('account.credit')</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -118,6 +126,9 @@
             update_trial_balance();
             $('#hidden_date').text($(this).val());
         });
+        $('#trial_bal_location_id').change( function() {
+            update_trial_balance();
+        });
     });
 
     function update_trial_balance(){
@@ -130,8 +141,9 @@
         $('table#trial_balance_table tbody#account_balances_details').html('<tr><td colspan="3"><i class="fas fa-sync fa-spin fa-fw"></i></td></tr>');
 
         var end_date = $('input#end_date').val();
+        var location_id = $('#trial_bal_location_id').val()
         $.ajax({
-            url: "{{action('AccountReportsController@trialBalance')}}?end_date=" + end_date,
+            url: "{{action('AccountReportsController@trialBalance')}}?end_date=" + end_date + '&location_id=' + location_id,
             dataType: "json",
             success: function(result){
                 $('span#supplier_due').text(__currency_trans_from_en(result.supplier_due, true));

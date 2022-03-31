@@ -50,21 +50,6 @@
             ><i class="fa fa-print"></i> @lang( 'messages.print' )</button>
         </div>
     </div>
-    <br>
-    <div class="row no-print">
-        <div class="col-xs-12">
-            <div class="form-group pull-right">
-                <div class="input-group">
-                  <button type="button" class="btn btn-primary" id="profit_tabs_filter">
-                    <span>
-                      <i class="fa fa-calendar"></i> {{ __('messages.filter_by_date') }}
-                    </span>
-                    <i class="fa fa-caret-down"></i>
-                  </button>
-                </div>
-            </div>
-        </div>
-    </div>
     <div class="row no-print">
         <div class="col-md-12">
            <!-- Custom Tabs -->
@@ -147,35 +132,23 @@
 
 <script type="text/javascript">
     $(document).ready( function() {
-        $('#profit_tabs_filter').daterangepicker(dateRangeSettings, function(start, end) {
-            $('#profit_tabs_filter span').html(
-                start.format(moment_date_format) + ' ~ ' + end.format(moment_date_format)
-            );
-            $('.nav-tabs li.active').find('a[data-toggle="tab"]').trigger('shown.bs.tab');
-        });
-        $('#profit_tabs_filter').on('cancel.daterangepicker', function(ev, picker) {
-            $('#profit_tabs_filter').html(
-                '<i class="fa fa-calendar"></i> ' + LANG.filter_by_date
-            );
-            $('.nav-tabs li.active').find('a[data-toggle="tab"]').trigger('shown.bs.tab');
-        });
-
         profit_by_products_table = $('#profit_by_products_table').DataTable({
                 processing: true,
                 serverSide: true,
                 "ajax": {
                     "url": "/reports/get-profit/product",
                     "data": function ( d ) {
-                        d.start_date = $('#profit_tabs_filter')
+                        d.start_date = $('#profit_loss_date_filter')
                             .data('daterangepicker')
                             .startDate.format('YYYY-MM-DD');
-                        d.end_date = $('#profit_tabs_filter')
+                        d.end_date = $('#profit_loss_date_filter')
                             .data('daterangepicker')
                             .endDate.format('YYYY-MM-DD');
+                        d.location_id = $('#profit_loss_location_filter').val();
                     }
                 },
                 columns: [
-                    { data: 'product', name: 'P.name'  },
+                    { data: 'product', name: 'product'  },
                     { data: 'gross_profit', "searchable": false},
                 ],
                 fnDrawCallback: function(oSettings) {
@@ -196,12 +169,13 @@
                         "ajax": {
                             "url": "/reports/get-profit/category",
                             "data": function ( d ) {
-                                d.start_date = $('#profit_tabs_filter')
+                                d.start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
-                                d.end_date = $('#profit_tabs_filter')
+                                d.end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
+                                d.location_id = $('#profit_loss_location_filter').val();
                             }
                         },
                         columns: [
@@ -226,12 +200,13 @@
                         "ajax": {
                             "url": "/reports/get-profit/brand",
                             "data": function ( d ) {
-                                d.start_date = $('#profit_tabs_filter')
+                                d.start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
-                                d.end_date = $('#profit_tabs_filter')
+                                d.end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
+                                d.location_id = $('#profit_loss_location_filter').val();
                             }
                         },
                         columns: [
@@ -256,12 +231,13 @@
                         "ajax": {
                             "url": "/reports/get-profit/location",
                             "data": function ( d ) {
-                                d.start_date = $('#profit_tabs_filter')
+                                d.start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
-                                d.end_date = $('#profit_tabs_filter')
+                                d.end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
+                                d.location_id = $('#profit_loss_location_filter').val();
                             }
                         },
                         columns: [
@@ -286,12 +262,13 @@
                         "ajax": {
                             "url": "/reports/get-profit/invoice",
                             "data": function ( d ) {
-                                d.start_date = $('#profit_tabs_filter')
+                                d.start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
-                                d.end_date = $('#profit_tabs_filter')
+                                d.end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
+                                d.location_id = $('#profit_loss_location_filter').val();
                             }
                         },
                         columns: [
@@ -316,12 +293,13 @@
                         "ajax": {
                             "url": "/reports/get-profit/date",
                             "data": function ( d ) {
-                                d.start_date = $('#profit_tabs_filter')
+                                d.start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
-                                d.end_date = $('#profit_tabs_filter')
+                                d.end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
+                                d.location_id = $('#profit_loss_location_filter').val();
                             }
                         },
                         columns: [
@@ -345,12 +323,13 @@
                         "ajax": {
                             "url": "/reports/get-profit/customer",
                             "data": function ( d ) {
-                                d.start_date = $('#profit_tabs_filter')
+                                d.start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
-                                d.end_date = $('#profit_tabs_filter')
+                                d.end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
+                                d.location_id = $('#profit_loss_location_filter').val();
                             }
                         },
                         columns: [
@@ -367,14 +346,16 @@
                     profit_by_customers_table.ajax.reload();
                 }
             } else if (target == '#profit_by_day') {
-                var start_date = $('#profit_tabs_filter')
+                var start_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .startDate.format('YYYY-MM-DD');
 
-                var end_date = $('#profit_tabs_filter')
+                var end_date = $('#profit_loss_date_filter')
                                     .data('daterangepicker')
                                     .endDate.format('YYYY-MM-DD');
-                var url = '/reports/get-profit/day?start_date=' + start_date + '&end_date=' + end_date;
+                var location_id = $('#profit_loss_location_filter').val();
+
+                var url = '/reports/get-profit/day?start_date=' + start_date + '&end_date=' + end_date + '&location_id=' + location_id;
                 $.ajax({
                         url: url,
                         dataType: 'html',

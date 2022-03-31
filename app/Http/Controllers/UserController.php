@@ -73,7 +73,7 @@ class UserController extends Controller
                 'blood_group', 'contact_number', 'fb_link', 'twitter_link', 'social_media_1',
                 'social_media_2', 'permanent_address', 'current_address',
                 'guardian_name', 'custom_field_1', 'custom_field_2',
-                'custom_field_3', 'custom_field_4', 'id_proof_name', 'id_proof_number', 'gender']);
+                'custom_field_3', 'custom_field_4', 'id_proof_name', 'id_proof_number', 'gender', 'family_number', 'alt_number']);
 
             if (!empty($request->input('dob'))) {
                 $input['dob'] = $this->moduleUtil->uf_date($request->input('dob'));

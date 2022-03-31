@@ -64,6 +64,9 @@
                 @endphp
                 <tr>
                     <td>
+                        @if($action != 'duplicate')
+                            <input type="hidden" class="row_variation_id" value="{{$variation->id}}">
+                        @endif
                         {!! Form::text($array_name . '[' . $row_index .'][' . $variation_array_name . '][' . $variation_row_index . '][sub_sku]', $action == 'edit' ? $variation->sub_sku : null, ['class' => 'form-control input-sm variation_value_name', $sub_sku_required]); !!}
                     </td>
                     <td>
@@ -95,7 +98,7 @@
                         @if($action !== 'duplicate')
                             @foreach($variation->media as $media)
                                 <div class="img-thumbnail">
-                                    <span class="badge bg-red delete-media" data-href="{{ action('ProductController@deleteMedia', ['media_id' => $media->id])}}"><i class="fa fa-close"></i></span>
+                                    <span class="badge bg-red delete-media" data-href="{{ action('ProductController@deleteMedia', ['media_id' => $media->id])}}"><i class="fas fa-times"></i></span>
                                     {!! $media->thumbnail() !!}
                                 </div>
                             @endforeach

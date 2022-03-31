@@ -94,7 +94,17 @@
 					<td>@if($history['quantity_change'] > 0 ) +<span class="display_currency" data-is_quantity="true">{{$history['quantity_change']}}</span> @else <span class="display_currency" data-is_quantity="true">{{$history['quantity_change']}}</span> @endif</td>
 					<td><span class="display_currency" data-is_quantity="true">{{$history['stock']}}</span></td>
 					<td>{{@format_datetime($history['date'])}}</td>
-					<td>{{$history['ref_no']}}</td>
+					<td>
+						{{$history['ref_no']}}
+
+						@if(!empty($history['additional_notes']))
+							@if(!empty($history['ref_no']))
+							<br>
+							@endif
+							{{$history['additional_notes']}}
+						
+						@endif
+					</td>
 				</tr>
 			@empty
 				<tr><td colspan="5" class="text-center">

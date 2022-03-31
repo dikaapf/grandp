@@ -15,7 +15,7 @@ class ExpenseCategoryController extends Controller
      */
     public function index()
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!(auth()->user()->can('expense.add') || auth()->user()->can('expense.edit'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -23,7 +23,7 @@ class ExpenseCategoryController extends Controller
             $business_id = request()->session()->get('user.business_id');
 
             $expense_category = ExpenseCategory::where('business_id', $business_id)
-                        ->select(['name', 'code', 'id']);
+                        ->select(['name', 'code', 'id', 'parent_id']);
 
             return Datatables::of($expense_category)
                 ->addColumn(
@@ -32,7 +32,15 @@ class ExpenseCategoryController extends Controller
                         &nbsp;
                         <button data-href="{{action(\'ExpenseCategoryController@destroy\', [$id])}}" class="btn btn-xs btn-danger delete_expense_category"><i class="glyphicon glyphicon-trash"></i> @lang("messages.delete")</button>'
                 )
+                ->editColumn('name', function ($row) {
+                    if (!empty($row->parent_id)) {
+                        return '--' . $row->name;
+                    } else {
+                        return $row->name;
+                    }
+                })
                 ->removeColumn('id')
+                ->removeColumn('parent_id')
                 ->rawColumns([2])
                 ->make(false);
         }
@@ -47,11 +55,16 @@ class ExpenseCategoryController extends Controller
      */
     public function create()
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!(auth()->user()->can('expense.add') || auth()->user()->can('expense.edit'))) {
             abort(403, 'Unauthorized action.');
         }
 
-        return view('expense_category.create');
+        $business_id = request()->session()->get('user.business_id');
+        $categories = ExpenseCategory::where('business_id', $business_id)
+                        ->whereNull('parent_id')
+                        ->pluck('name', 'id');
+
+        return view('expense_category.create')->with(compact('categories'));
     }
 
     /**
@@ -62,13 +75,17 @@ class ExpenseCategoryController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!(auth()->user()->can('expense.add') || auth()->user()->can('expense.edit'))) {
             abort(403, 'Unauthorized action.');
         }
 
         try {
             $input = $request->only(['name', 'code']);
             $input['business_id'] = $request->session()->get('user.business_id');
+
+            if (!empty($request->input('add_as_sub_cat')) &&  $request->input('add_as_sub_cat') == 1 && !empty($request->input('parent_id'))) {
+                $input['parent_id'] = $request->input('parent_id');
+            }
 
             ExpenseCategory::create($input);
             $output = ['success' => true,
@@ -104,7 +121,7 @@ class ExpenseCategoryController extends Controller
      */
     public function edit($id)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!(auth()->user()->can('expense.add') || auth()->user()->can('expense.edit'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -112,8 +129,12 @@ class ExpenseCategoryController extends Controller
             $business_id = request()->session()->get('user.business_id');
             $expense_category = ExpenseCategory::where('business_id', $business_id)->find($id);
 
+            $categories = ExpenseCategory::where('business_id', $business_id)
+                        ->whereNull('parent_id')
+                        ->pluck('name', 'id');
+
             return view('expense_category.edit')
-                    ->with(compact('expense_category'));
+                    ->with(compact('expense_category', 'categories'));
         }
     }
 
@@ -126,7 +147,7 @@ class ExpenseCategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!(auth()->user()->can('expense.add') || auth()->user()->can('expense.edit'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -138,6 +159,13 @@ class ExpenseCategoryController extends Controller
                 $expense_category = ExpenseCategory::where('business_id', $business_id)->findOrFail($id);
                 $expense_category->name = $input['name'];
                 $expense_category->code = $input['code'];
+
+                if (!empty($request->input('add_as_sub_cat')) &&  $request->input('add_as_sub_cat') == 1 && !empty($request->input('parent_id'))) {
+                    $expense_category->parent_id = $request->input('parent_id');
+                } else {
+                    $expense_category->parent_id = null;
+                }
+
                 $expense_category->save();
 
                 $output = ['success' => true,
@@ -163,7 +191,7 @@ class ExpenseCategoryController extends Controller
      */
     public function destroy($id)
     {
-        if (!auth()->user()->can('expense.access')) {
+        if (!(auth()->user()->can('expense.add') || auth()->user()->can('expense.edit'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -173,6 +201,9 @@ class ExpenseCategoryController extends Controller
 
                 $expense_category = ExpenseCategory::where('business_id', $business_id)->findOrFail($id);
                 $expense_category->delete();
+
+                //delete sub categories also
+                ExpenseCategory::where('business_id', $business_id)->where('parent_id', $id)->delete();
 
                 $output = ['success' => true,
                             'msg' => __("expense.deleted_success")
@@ -187,5 +218,26 @@ class ExpenseCategoryController extends Controller
 
             return $output;
         }
+    }
+
+    public function getSubCategories(Request $request)
+    {
+        if (!empty($request->input('cat_id'))) {
+            $category_id = $request->input('cat_id');
+            $business_id = $request->session()->get('user.business_id');
+            $sub_categories = ExpenseCategory::where('business_id', $business_id)
+                        ->where('parent_id', $category_id)
+                        ->select(['name', 'id'])
+                        ->get();
+        }
+
+        $html = '<option value="">' . __('lang_v1.none') . '</option>';
+        if (!empty($sub_categories)) {
+            foreach ($sub_categories as $sub_category) {
+                $html .= '<option value="' . $sub_category->id .'">' .$sub_category->name . '</option>';
+            }
+        }
+        echo $html;
+        exit;
     }
 }

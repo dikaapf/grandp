@@ -10,6 +10,9 @@
 
 <!-- Main content -->
 <section class="content">
+    @php
+      $pos_settings = !empty(session('business.pos_settings')) ? json_decode(session('business.pos_settings'), true) : [];
+    @endphp
     @component('components.widget', ['class' => 'box-primary'])
         {!! Form::open(['url' => action('RoleController@store'), 'method' => 'post', 'id' => 'role_add_form' ]) !!}
         <div class="row">
@@ -20,29 +23,48 @@
           </div>
         </div>
         </div>
-        @if(in_array('service_staff', $enabled_modules))
-        <div class="row">
-        <div class="col-md-2">
-          <h4>@lang( 'lang_v1.user_type' )</h4>
-        </div>
-        <div class="col-md-9 col-md-offset-1">
-          <div class="col-md-12">
-          <div class="checkbox">
-            <label>
-              {!! Form::checkbox('is_service_staff', 1, false, 
-              [ 'class' => 'input-icheck']); !!} {{ __( 'restaurant.service_staff' ) }}
-            </label>
-            @show_tooltip(__('restaurant.tooltip_service_staff'))
-          </div>
-          </div>
-        </div>
-        </div>
-        @endif
         <div class="row">
         <div class="col-md-3">
           <label>@lang( 'user.permissions' ):</label> 
         </div>
         </div>
+
+        <div class="row check_group">
+          <div class="col-md-1">
+            <h4>@lang( 'lang_v1.others' )</h4>
+          </div>
+          <div class="col-md-2">
+            <div class="checkbox">
+                <label>
+                  <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+                </label>
+              </div>
+          </div>
+          <div class="col-md-9">
+              @if(in_array('service_staff', $enabled_modules))
+                <div class="col-md-12">
+                  <div class="checkbox">
+                    <label>
+                      {!! Form::checkbox('is_service_staff', 1, false, 
+                      [ 'class' => 'input-icheck']); !!} {{ __( 'restaurant.service_staff' ) }}
+                    </label>
+                    @show_tooltip(__('restaurant.tooltip_service_staff'))
+                  </div>
+                </div>
+              @endif
+
+              <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::checkbox('permissions[]', 'view_export_buttons', false, 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_export_buttons' ) }}
+                  </label>
+                </div>
+              </div>
+          </div>
+        </div>
+        <hr>
+
         <div class="row check_group">
         <div class="col-md-1">
           <h4>@lang( 'role.user' )</h4>
@@ -149,10 +171,11 @@
             </div>
         </div>
         <div class="col-md-9">
+          <div class="radio-group">
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'supplier.view', false, 
+                {!! Form::radio('radio_option[supplier_view]', 'supplier.view', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_supplier' ) }}
               </label>
             </div>
@@ -160,10 +183,11 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'supplier.view_own', false, 
+                {!! Form::radio('radio_option[supplier_view]', 'supplier.view_own', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_supplier' ) }}
               </label>
             </div>
+          </div>
           </div>
           <div class="col-md-12">
             <div class="checkbox">
@@ -194,7 +218,7 @@
         <hr>
         <div class="row check_group">
         <div class="col-md-1">
-          <h4>@lang( 'role.customer' )</h4>
+          <h4>@lang( 'role.customer' ) @show_tooltip(__('lang_v1.customer_permissions_tooltip'))</h4>
         </div>
         <div class="col-md-2">
           <div class="checkbox">
@@ -207,7 +231,7 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'customer.view', false, 
+                {!! Form::radio('radio_option[customer_view]', 'customer.view', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_customer' ) }}
               </label>
             </div>
@@ -215,10 +239,52 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'customer.view_own', false, 
+                {!! Form::radio('radio_option[customer_view]', 'customer.view_own', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_customer' ) }}
               </label>
             </div>
+            <hr>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[customer_view_by_sell]', 'customer_with_no_sell_one_month', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.customer_with_no_sell_one_month' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[customer_view_by_sell]', 'customer_with_no_sell_three_month', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.customer_with_no_sell_three_month' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[customer_view_by_sell]', 'customer_with_no_sell_six_month', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.customer_with_no_sell_six_month' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[customer_view_by_sell]', 'customer_with_no_sell_one_year', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.customer_with_no_sell_one_year' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[customer_view_by_sell]', 'customer_irrespective_of_sell', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.customer_irrespective_of_sell' ) }}
+              </label>
+            </div>
+            <hr>
           </div>
           <div class="col-md-12">
             <div class="checkbox">
@@ -327,8 +393,16 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'purchase.view', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'role.purchase.view' ) }}
+                {!! Form::radio('radio_option[purchase_view]', 'purchase.view', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_purchase_n_stock_adjustment' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[purchase_view]', 'view_own_purchase', false,['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.view_own_purchase_n_stock_adjustment') }}
               </label>
             </div>
           </div>
@@ -360,9 +434,24 @@
             <div class="checkbox">
               <label>
                 {!! Form::checkbox('permissions[]', 'purchase.payments', false,['class' => 'input-icheck']); !!}
-                {{ __('lang_v1.purchase.payments') }}
+                {{ __('lang_v1.add_purchase_payment') }}
               </label>
-              @show_tooltip(__('lang_v1.purchase_payments'))
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'edit_purchase_payment', false,['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.edit_purchase_payment') }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'delete_purchase_payment', false,['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.delete_purchase_payment') }}
+              </label>
             </div>
           </div>
           <div class="col-md-12">
@@ -373,20 +462,69 @@
               </label>
             </div>
           </div>
-          <div class="col-md-12">
-            <div class="checkbox">
-              <label>
-                {!! Form::checkbox('permissions[]', 'view_own_purchase', false,['class' => 'input-icheck']); !!}
-                {{ __('lang_v1.view_own_purchase') }}
-              </label>
-            </div>
-          </div>
-
         </div>
         </div>
         <hr>
         @endif
 
+        @if(!empty($common_settings['enable_purchase_order']))
+          <div class="row check_group">
+            <div class="col-md-1">
+              <h4>@lang( 'lang_v1.purchase_order' )</h4>
+            </div>
+            <div class="col-md-2">
+              <div class="checkbox">
+                  <label>
+                    <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+                  </label>
+                </div>
+            </div>
+            <div class="col-md-9">
+              <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::radio('radio_option[purchase_order_view]', 'purchase_order.view_all', false, 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_purchase_order' ) }}
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::radio('radio_option[purchase_order_view]', 'purchase_order.view_own', false, 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_purchase_order' ) }}
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::checkbox('permissions[]', 'purchase_order.create', false, 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.create_purchase_order' ) }}
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::checkbox('permissions[]', 'purchase_order.update', false, 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.edit_purchase_order' ) }}
+                  </label>
+                </div>
+              </div>
+              <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::checkbox('permissions[]', 'purchase_order.delete', false, 
+                    [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.delete_purchase_order' ) }}
+                  </label>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <hr>
+        @endif
         <div class="row check_group">
             <div class="col-md-1">
                 <h4>@lang( 'sale.pos_sale' )</h4>
@@ -463,7 +601,7 @@
         <hr>
         <div class="row check_group">
         <div class="col-md-1">
-          <h4>@lang( 'sale.sale' )</h4>
+          <h4>@lang( 'sale.sale' ) @show_tooltip(__('lang_v1.sell_permissions_tooltip'))</h4>
         </div>
         <div class="col-md-2">
           <div class="checkbox">
@@ -477,8 +615,64 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
+                {!! Form::radio('radio_option[sell_view]', 'direct_sell.view', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_sale' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[sell_view]', 'view_own_sell_only', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_sell_only' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'view_paid_sells_only', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_paid_sells_only' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'view_due_sells_only', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_due_sells_only' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'view_partial_sells_only', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_partially_paid_sells_only' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'view_overdue_sells_only', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_overdue_sells_only' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
                 {!! Form::checkbox('permissions[]', 'direct_sell.access', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'role.direct_sell.access' ) }}
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.add_sell' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'direct_sell.update', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.update_sale' ) }}
               </label>
             </div>
           </div>
@@ -494,32 +688,6 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'list_drafts', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.list_drafts' ) }}
-              </label>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="checkbox">
-              <label>
-                {!! Form::checkbox('permissions[]', 'list_quotations', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.list_quotations' ) }}
-              </label>
-            </div>
-          </div>
-
-          <div class="col-md-12">
-            <div class="checkbox">
-              <label>
-                {!! Form::checkbox('permissions[]', 'view_own_sell_only', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_sell_only' ) }}
-              </label>
-            </div>
-          </div>
-
-          <div class="col-md-12">
-            <div class="checkbox">
-              <label>
                 {!! Form::checkbox('permissions[]', 'view_commission_agent_sell', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_commission_agent_sell' ) }}
               </label>
@@ -530,9 +698,24 @@
             <div class="checkbox">
               <label>
                 {!! Form::checkbox('permissions[]', 'sell.payments', false, ['class' => 'input-icheck']); !!}
-                {{ __('lang_v1.sell.payments') }}
+                {{ __('lang_v1.add_sell_payment') }}
               </label>
-              @show_tooltip(__('lang_v1.sell_payments'))
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'edit_sell_payment', false, ['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.edit_sell_payment') }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'delete_sell_payment', false, ['class' => 'input-icheck']); !!}
+                {{ __('lang_v1.delete_sell_payment') }}
+              </label>
             </div>
           </div>
           <div class="col-md-12">
@@ -574,7 +757,15 @@
             <div class="checkbox">
               <label>
                 {!! Form::checkbox('permissions[]', 'access_sell_return', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.access_sell_return' ) }}
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.access_all_sell_return' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'access_own_sell_return', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.access_own_sell_return' ) }}
               </label>
             </div>
           </div>
@@ -590,8 +781,161 @@
         </div>
         </div>
         <hr>
+      @if(!empty($pos_settings['enable_sales_order']))
+        <div class="row check_group">
+          <div class="col-md-1">
+            <h4>@lang( 'lang_v1.sales_order' )</h4>
+          </div>
+          <div class="col-md-2">
+            <div class="checkbox">
+                <label>
+                  <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+                </label>
+              </div>
+          </div>
+          <div class="col-md-9">
+            <div class="col-md-12">
+              <div class="checkbox">
+                <label>
+                  {!! Form::radio('radio_option[so_view]', 'so.view_all', false, 
+                  [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_so' ) }}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="checkbox">
+                <label>
+                  {!! Form::radio('radio_option[so_view]', 'so.view_own', false, 
+                  [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_so' ) }}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="checkbox">
+                <label>
+                  {!! Form::checkbox('permissions[]', 'so.create', false, 
+                  [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.create_so' ) }}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="checkbox">
+                <label>
+                  {!! Form::checkbox('permissions[]', 'so.update', false, 
+                  [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.edit_so' ) }}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-12">
+              <div class="checkbox">
+                <label>
+                  {!! Form::checkbox('permissions[]', 'so.delete', false, 
+                  [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.delete_so' ) }}
+                </label>
+              </div>
+            </div>
 
-    <div class="row check_group">
+          </div>
+        </div>
+        <hr>
+      @endif
+      <div class="row check_group">
+        <div class="col-md-1">
+          <h4>@lang( 'sale.draft' )</h4>
+        </div>
+        <div class="col-md-2">
+          <div class="checkbox">
+              <label>
+                <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+              </label>
+            </div>
+        </div>
+        <div class="col-md-9">
+          <div class="col-md-12">
+        <div class="checkbox">
+          <label>
+            {!! Form::radio('radio_option[draft_view]', 'draft.view_all', false, 
+            [ 'class' => 'input-icheck']) !!} {{ __( 'lang_v1.view_all_drafts' ) }}
+          </label>
+        </div>
+      </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[draft_view]', 'draft.view_own', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_drafts' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'draft.update', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.edit_draft' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'draft.delete', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.delete_draft' ) }}
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <hr>
+      <div class="row check_group">
+        <div class="col-md-1">
+          <h4>@lang( 'lang_v1.quotation' )</h4>
+        </div>
+        <div class="col-md-2">
+          <div class="checkbox">
+              <label>
+                <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+              </label>
+            </div>
+        </div>
+        <div class="col-md-9">
+          <div class="col-md-12">
+        <div class="checkbox">
+          <label>
+            {!! Form::radio('radio_option[quotation_view]', 'quotation.view_all', false, 
+            [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_all_quotations' ) }}
+          </label>
+        </div>
+      </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::radio('radio_option[quotation_view]', 'quotation.view_own', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.view_own_quotations' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'quotation.update', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.edit_quotation' ) }}
+              </label>
+            </div>
+          </div>
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'quotation.delete', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.delete_quotation' ) }}
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <hr>
+      <div class="row check_group">
         <div class="col-md-1">
           <h4>@lang( 'lang_v1.shipments' )</h4>
         </div>
@@ -606,16 +950,24 @@
             <div class="col-md-12">
                 <div class="checkbox">
                   <label>
-                    {!! Form::checkbox('permissions[]', 'access_shipping', false, ['class' => 'input-icheck']); !!}
-                    {{ __('lang_v1.access_shipping') }}
+                    {!! Form::radio('radio_option[shipping_view]', 'access_shipping', false, ['class' => 'input-icheck']); !!}
+                    {{ __('lang_v1.access_all_shipments') }}
                   </label>
                 </div>
             </div>
             <div class="col-md-12">
                 <div class="checkbox">
                   <label>
-                    {!! Form::checkbox('permissions[]', 'access_own_shipping', false, ['class' => 'input-icheck']); !!}
+                    {!! Form::radio('radio_option[shipping_view]', 'access_own_shipping', false, ['class' => 'input-icheck']); !!}
                     {{ __('lang_v1.access_own_shipping') }}
+                  </label>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="checkbox">
+                  <label>
+                    {!! Form::checkbox('permissions[]', 'access_pending_shipments_only', false, ['class' => 'input-icheck']); !!}
+                    {{ __('lang_v1.access_pending_shipments_only') }}
                   </label>
                 </div>
             </div>
@@ -987,24 +1339,6 @@
               </label>
             </div>
           </div>
-          @if(in_array('expenses', $enabled_modules))
-          <div class="col-md-12">
-            <div class="checkbox">
-              <label>
-                {!! Form::checkbox('permissions[]', 'expense.access', false, 
-                [ 'class' => 'input-icheck']); !!} {{ __( 'role.expense.access' ) }}
-              </label>
-            </div>
-          </div>
-          <div class="col-md-12">
-            <div class="checkbox">
-              <label>
-                {!! Form::checkbox('permissions[]', 'view_own_expense', false,['class' => 'input-icheck']); !!}
-                {{ __('lang_v1.view_own_expense') }}
-              </label>
-            </div>
-          </div>
-          @endif
           <div class="col-md-12">
             <div class="checkbox">
               <label>
@@ -1013,9 +1347,65 @@
               </label>
             </div>
           </div>
-
         </div>
         </div>
+        @if(in_array('expenses', $enabled_modules))
+            <hr>
+            <div class="row check_group">
+                <div class="col-md-1">
+                  <h4>@lang( 'lang_v1.expense' )</h4>
+                </div>
+                <div class="col-md-2">
+                  <div class="checkbox">
+                      <label>
+                        <input type="checkbox" class="check_all input-icheck" > {{ __( 'role.select_all' ) }}
+                      </label>
+                    </div>
+                </div>
+                <div class="col-md-9">
+                  <div class="col-md-12">
+                        <div class="checkbox">
+                          <label>
+                            {!! Form::radio('radio_option[expense_view]', 'all_expense.access', false, 
+                            [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.access_all_expense' ) }}
+                          </label>
+                        </div>
+                      </div>
+                    <div class="col-md-12">
+                        <div class="checkbox">
+                      <label>
+                        {!! Form::radio('radio_option[expense_view]', 'view_own_expense', false,['class' => 'input-icheck']); !!}
+                        {{ __('lang_v1.view_own_expense') }}
+                      </label>
+                        </div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="checkbox">
+                      <label>
+                        {!! Form::checkbox('permissions[]', 'expense.add', false, 
+                        [ 'class' => 'input-icheck']); !!} {{ __( 'expense.add_expense' ) }}
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="checkbox">
+                      <label>
+                        {!! Form::checkbox('permissions[]', 'expense.edit', false, 
+                        [ 'class' => 'input-icheck']); !!} {{ __( 'expense.edit_expense' ) }}
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="checkbox">
+                      <label>
+                        {!! Form::checkbox('permissions[]', 'expense.delete', false, 
+                        [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.delete_expense' ) }}
+                      </label>
+                    </div>
+                  </div>
+                </div>
+            </div>
+        @endif
         <hr>
         <div class="row check_group">
         <div class="col-md-3">
@@ -1046,6 +1436,24 @@
               </label>
             </div>
           </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'edit_account_transaction', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.edit_account_transaction' ) }}
+              </label>
+            </div>
+          </div>
+
+          <div class="col-md-12">
+            <div class="checkbox">
+              <label>
+                {!! Form::checkbox('permissions[]', 'delete_account_transaction', false, 
+                [ 'class' => 'input-icheck']); !!} {{ __( 'lang_v1.delete_account_transaction' ) }}
+              </label>
+            </div>
+          </div>
         </div>
         </div>
         <hr>
@@ -1065,7 +1473,7 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'crud_all_bookings', false, 
+                {!! Form::radio('radio_option[bookings_view]', 'crud_all_bookings', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'restaurant.add_edit_view_all_booking' ) }}
               </label>
             </div>
@@ -1073,7 +1481,7 @@
           <div class="col-md-12">
             <div class="checkbox">
               <label>
-                {!! Form::checkbox('permissions[]', 'crud_own_bookings', false, 
+                {!! Form::radio('radio_option[bookings_view]', 'crud_own_bookings', false, 
                 [ 'class' => 'input-icheck']); !!} {{ __( 'restaurant.add_edit_view_own_booking' ) }}
               </label>
             </div>

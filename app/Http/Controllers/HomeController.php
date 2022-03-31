@@ -61,6 +61,8 @@ class HomeController extends Controller
     {
         $business_id = request()->session()->get('user.business_id');
 
+        $is_admin = $this->businessUtil->is_admin(auth()->user());
+
         if (!auth()->user()->can('dashboard.data')) {
             return view('home.index');
         }
@@ -207,7 +209,9 @@ class HomeController extends Controller
             }
         }
 
-        return view('home.index', compact('date_filters', 'sells_chart_1', 'sells_chart_2', 'widgets', 'all_locations'));
+        $common_settings = !empty(session('business.common_settings')) ? session('business.common_settings') : [];
+
+        return view('home.index', compact('date_filters', 'sells_chart_1', 'sells_chart_2', 'widgets', 'all_locations', 'common_settings', 'is_admin'));
     }
 
     /**
@@ -242,14 +246,15 @@ class HomeController extends Controller
             $total_purchase_inc_tax = !empty($purchase_details['total_purchase_inc_tax']) ? $purchase_details['total_purchase_inc_tax'] : 0;
             $total_purchase_return_inc_tax = $transaction_totals['total_purchase_return_inc_tax'];
 
-            $total_purchase = $total_purchase_inc_tax - $total_purchase_return_inc_tax;
             $output = $purchase_details;
-            $output['total_purchase'] = $total_purchase;
+            $output['total_purchase'] = $total_purchase_inc_tax;
+            $output['total_purchase_return'] = $total_purchase_return_inc_tax;
 
             $total_sell_inc_tax = !empty($sell_details['total_sell_inc_tax']) ? $sell_details['total_sell_inc_tax'] : 0;
             $total_sell_return_inc_tax = !empty($transaction_totals['total_sell_return_inc_tax']) ? $transaction_totals['total_sell_return_inc_tax'] : 0;
 
-            $output['total_sell'] = $total_sell_inc_tax - $total_sell_return_inc_tax;
+            $output['total_sell'] = $total_sell_inc_tax;
+            $output['total_sell_return'] = $total_sell_return_inc_tax;
 
             $output['invoice_due'] = $sell_details['invoice_due'];
             $output['total_expense'] = $transaction_totals['total_expense'];
@@ -308,8 +313,10 @@ class HomeController extends Controller
             $products = $query->select(
                 'p.name as product',
                 'p.type',
+                'p.sku',
                 'pv.name as product_variation',
                 'v.name as variation',
+                'v.sub_sku',
                 'l.name as location',
                 'variation_location_details.qty_available as stock',
                 'u.short_name as unit'
@@ -320,15 +327,17 @@ class HomeController extends Controller
             return Datatables::of($products)
                 ->editColumn('product', function ($row) {
                     if ($row->type == 'single') {
-                        return $row->product;
+                        return $row->product . ' (' . $row->sku . ')';
                     } else {
-                        return $row->product . ' - ' . $row->product_variation . ' - ' . $row->variation;
+                        return $row->product . ' - ' . $row->product_variation . ' - ' . $row->variation . ' (' . $row->sub_sku . ')';
                     }
                 })
                 ->editColumn('stock', function ($row) {
                     $stock = $row->stock ? $row->stock : 0 ;
                     return '<span data-is_quantity="true" class="display_currency" data-currency_symbol=false>'. (float)$stock . '</span> ' . $row->unit;
                 })
+                ->removeColumn('sku')
+                ->removeColumn('sub_sku')
                 ->removeColumn('unit')
                 ->removeColumn('type')
                 ->removeColumn('product_variation')
@@ -364,12 +373,16 @@ class HomeController extends Controller
                     ->where('transactions.business_id', $business_id)
                     ->where('transactions.type', 'purchase')
                     ->where('transactions.payment_status', '!=', 'paid')
-                    ->whereRaw("DATEDIFF( DATE_ADD( transaction_date, INTERVAL IF(c.pay_term_type = 'days', c.pay_term_number, 30 * c.pay_term_number) DAY), '$today') <= 7");
+                    ->whereRaw("DATEDIFF( DATE_ADD( transaction_date, INTERVAL IF(transactions.pay_term_type = 'days', transactions.pay_term_number, 30 * transactions.pay_term_number) DAY), '$today') <= 7");
 
             //Check for permitted locations of a user
             $permitted_locations = auth()->user()->permitted_locations();
             if ($permitted_locations != 'all') {
                 $query->whereIn('transactions.location_id', $permitted_locations);
+            }
+
+            if (!empty(request()->input('location_id'))) {
+                $query->where('transactions.location_id', request()->input('location_id'));
             }
 
             $dues =  $query->select(
@@ -441,6 +454,10 @@ class HomeController extends Controller
             $permitted_locations = auth()->user()->permitted_locations();
             if ($permitted_locations != 'all') {
                 $query->whereIn('transactions.location_id', $permitted_locations);
+            }
+
+            if (!empty(request()->input('location_id'))) {
+                $query->where('transactions.location_id', request()->input('location_id'));
             }
 
             $dues =  $query->select(
@@ -637,5 +654,14 @@ class HomeController extends Controller
 
             return $output;
         }
+    }
+
+    public function getUserLocation($latlng)
+    {
+        $latlng_array = explode(',', $latlng);
+
+        $response = $this->moduleUtil->getLocationFromCoordinates($latlng_array[0], $latlng_array[1]);
+
+        return ['address' => $response];
     }
 }

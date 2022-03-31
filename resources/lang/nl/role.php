@@ -63,7 +63,6 @@
 "brand" => "Merk",
 "tax_rate" => "Belastingtarief",
 "unit" => "Eenheid",
-"expense.access" => "Toegangskosten",
 "access_locations" => "Toegang locaties",
 "all_locations" => "Alle locaties",
 "dashboard" => "Huis",

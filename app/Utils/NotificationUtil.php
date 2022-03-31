@@ -69,7 +69,7 @@ class NotificationUtil extends Util
                             Notification::route('mail', $data['to_email'])
                                             ->notify(new SupplierNotification($data));
                         }
-                        $this->activityLog($transaction, 'email_notification_sent', null, [], false);
+                        $this->activityLog($transaction, 'email_notification_sent', null, [], false, $business_id);
                         
                     } catch (\Exception $e) {
                         \Log::emergency("File:" . $e->getFile(). "Line:" . $e->getLine(). "Message:" . $e->getMessage());
@@ -84,7 +84,7 @@ class NotificationUtil extends Util
                         try {
                             $this->sendSms($data);
 
-                            $this->activityLog($transaction, 'sms_notification_sent', null, [], false);
+                            $this->activityLog($transaction, 'sms_notification_sent', null, [], false, $business_id);
 
                         } catch (\Exception $e) {
                             \Log::emergency("File:" . $e->getFile(). "Line:" . $e->getLine(). "Message:" . $e->getMessage());
@@ -124,6 +124,53 @@ class NotificationUtil extends Util
                 $contact_name = $booking->customer->name;
 
                 $data[$key] = str_replace('{contact_name}', $contact_name, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_1}') !== false) {
+                $contact_custom_field_1 = $booking->customer->custom_field1 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_1}', $contact_custom_field_1, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_2}') !== false) {
+                $contact_custom_field_2 = $booking->customer->custom_field2 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_2}', $contact_custom_field_2, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_3}') !== false) {
+                $contact_custom_field_3 = $booking->customer->custom_field3 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_3}', $contact_custom_field_3, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_4}') !== false) {
+                $contact_custom_field_4 = $booking->customer->custom_field4 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_4}', $contact_custom_field_4, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_5}') !== false) {
+                $contact_custom_field_5 = $booking->customer->custom_field5 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_5}', $contact_custom_field_5, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_6}') !== false) {
+                $contact_custom_field_6 = $booking->customer->custom_field6 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_6}', $contact_custom_field_6, $data[$key]);
+            }
+
+            if (strpos($value, '{contact_custom_field_7}') !== false) {
+                $contact_custom_field_7 = $booking->customer->custom_field7 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_7}', $contact_custom_field_7, $data[$key]);
+            }
+            if (strpos($value, '{contact_custom_field_8}') !== false) {
+                $contact_custom_field_8 = $booking->customer->custom_field8 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_8}', $contact_custom_field_8, $data[$key]);
+            }
+            if (strpos($value, '{contact_custom_field_9}') !== false) {
+                $contact_custom_field_9 = $booking->customer->custom_field9 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_9}', $contact_custom_field_9, $data[$key]);
+            }
+            if (strpos($value, '{contact_custom_field_10}') !== false) {
+                $contact_custom_field_10 = $booking->customer->custom_field10 ?? '';
+                $data[$key] = str_replace('{contact_custom_field_10}', $contact_custom_field_10, $data[$key]);
             }
 
             //Replace table

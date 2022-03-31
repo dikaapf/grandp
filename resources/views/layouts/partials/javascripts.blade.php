@@ -4,6 +4,7 @@
     APP = {};
     APP.PUSHER_APP_KEY = '{{config('broadcasting.connections.pusher.key')}}';
     APP.PUSHER_APP_CLUSTER = '{{config('broadcasting.connections.pusher.options.cluster')}}';
+    APP.INVOICE_SCHEME_SEPARATOR = '{{config('constants.invoice_scheme_separator')}}';
     //variable from app service provider
     APP.PUSHER_ENABLED = '{{$__is_pusher_enabled}}';
     @auth
@@ -49,6 +50,7 @@
 @endphp
 
 <script>
+    Dropzone.autoDiscover = false;
     moment.tz.setDefault('{{ Session::get("business.time_zone") }}');
     $(document).ready(function(){
         $.ajaxSetup({

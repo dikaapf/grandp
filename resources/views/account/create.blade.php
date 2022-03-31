@@ -39,6 +39,27 @@
                 {!! Form::text('opening_balance', 0, ['class' => 'form-control input_number','placeholder' => __( 'account.opening_balance' ) ]); !!}
             </div>
 
+            <label>@lang('lang_v1.account_details'):</label>
+            <table class="table table-striped">
+                <tr>
+                    <th>
+                        @lang('lang_v1.label')
+                    </th>
+                    <th>
+                        @lang('product.value')
+                    </th>
+                </tr>
+                @for ($i = 0; $i < 6; $i++)
+                    <tr>
+                        <td>
+                            {!! Form::text('account_details['.$i.'][label]', null, ['class' => 'form-control']); !!}
+                        </td>
+                        <td>
+                            {!! Form::text('account_details['.$i.'][value]', null, ['class' => 'form-control']); !!}      
+                        </td>
+                    </tr>
+                @endfor
+            </table>
         
             <div class="form-group">
                 {!! Form::label('note', __( 'brand.note' )) !!}

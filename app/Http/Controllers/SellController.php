@@ -26,6 +26,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Product;
 use App\Media;
 use Spatie\Activitylog\Models\Activity;
+use Illuminate\Support\Facades\Artisan;
 
 class SellController extends Controller
 {
@@ -74,12 +75,13 @@ class SellController extends Controller
     {
         $is_admin = $this->businessUtil->is_admin(auth()->user());
 
-        if ( !$is_admin && !auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping']) ) {
+        if ( !$is_admin && !auth()->user()->hasAnyPermission(['sell.view', 'sell.create', 'direct_sell.access', 'direct_sell.view', 'view_own_sell_only', 'view_commission_agent_sell', 'access_shipping', 'access_own_shipping', 'access_commission_agent_shipping', 'so.view_all', 'so.view_own']) ) {
             abort(403, 'Unauthorized action.');
         }
 
         $business_id = request()->session()->get('user.business_id');
         $is_woocommerce = $this->moduleUtil->isModuleInstalled('Woocommerce');
+        $is_crm = $this->moduleUtil->isModuleInstalled('Crm');
         $is_tables_enabled = $this->transactionUtil->isModuleEnabled('tables');
         $is_service_staff_enabled = $this->transactionUtil->isModuleEnabled('service_staff');
         $is_types_service_enabled = $this->moduleUtil->isModuleEnabled('types_of_service');
@@ -88,7 +90,10 @@ class SellController extends Controller
             $payment_types = $this->transactionUtil->payment_types(null, true, $business_id);
             $with = [];
             $shipping_statuses = $this->transactionUtil->shipping_statuses();
-            $sells = $this->transactionUtil->getListSells($business_id);
+
+            $sale_type = !empty(request()->input('sale_type')) ? request()->input('sale_type') : 'sell';
+
+            $sells = $this->transactionUtil->getListSells($business_id, $sale_type);
 
             $permitted_locations = auth()->user()->permitted_locations();
             if ($permitted_locations != 'all') {
@@ -104,7 +109,7 @@ class SellController extends Controller
             }
 
             $partial_permissions = ['view_own_sell_only', 'view_commission_agent_sell', 'access_own_shipping', 'access_commission_agent_shipping'];
-            if (!auth()->user()->can('direct_sell.access')) {
+            if (!auth()->user()->can('direct_sell.view')) {
                 $sells->where( function($q){
                     if (auth()->user()->hasAnyPermission(['view_own_sell_only', 'access_own_shipping'])) {
                         $q->where('transactions.created_by', request()->session()->get('user.id'));
@@ -117,7 +122,47 @@ class SellController extends Controller
                 });
             }
 
-            
+            $only_shipments = request()->only_shipments == 'true' ? true : false;
+            if ($only_shipments) {
+                $sells->whereNotNull('transactions.shipping_status');
+
+                if (auth()->user()->hasAnyPermission(['access_pending_shipments_only'])) {
+                    $sells->where('transactions.shipping_status', '!=', 'delivered');
+                }
+            }
+
+            if (!$is_admin && !$only_shipments && $sale_type != 'sales_order') {
+                $payment_status_arr = [];
+                if (auth()->user()->can('view_paid_sells_only')) {
+                    $payment_status_arr[] = 'paid';
+                }
+
+                if (auth()->user()->can('view_due_sells_only')) {
+                    $payment_status_arr[] = 'due';
+                }
+
+                if (auth()->user()->can('view_partial_sells_only')) {
+                    $payment_status_arr[] = 'partial';
+                }
+
+                if (empty($payment_status_arr)) {
+                    if (auth()->user()->can('view_overdue_sells_only')) {
+                        $sells->OverDue();
+                    }
+                } else {
+                    if (auth()->user()->can('view_overdue_sells_only')) {
+                        $sells->where( function($q) use($payment_status_arr){
+                            $q->whereIn('transactions.payment_status', $payment_status_arr)
+                            ->orWhere( function($qr) {
+                                $qr->OverDue();
+                            });
+
+                        });
+                    } else {
+                        $sells->whereIn('transactions.payment_status', $payment_status_arr);
+                    }
+                }
+            }
 
             if (!empty(request()->input('payment_status')) && request()->input('payment_status') != 'overdue') {
                 $sells->where('transactions.payment_status', request()->input('payment_status'));
@@ -127,6 +172,7 @@ class SellController extends Controller
                     ->whereNotNull('transactions.pay_term_type')
                     ->whereRaw("IF(transactions.pay_term_type='days', DATE_ADD(transactions.transaction_date, INTERVAL transactions.pay_term_number DAY) < CURDATE(), DATE_ADD(transactions.transaction_date, INTERVAL transactions.pay_term_number MONTH) < CURDATE())");
             }
+            
 
             //Add condition for location,used in sales representative expense report
             if (request()->has('location_id')) {
@@ -171,10 +217,21 @@ class SellController extends Controller
                 }
             }
 
-            if ($is_woocommerce) {
-                $sells->addSelect('transactions.woocommerce_order_id');
-                if (request()->only_woocommerce_sells) {
+            if (!empty(request()->input('source'))) {
+                //only exception for woocommerce
+                if (request()->input('source') == 'woocommerce') {
                     $sells->whereNotNull('transactions.woocommerce_order_id');
+                } else {
+                    $sells->where('transactions.source', request()->input('source'));
+                }
+
+            }
+
+            if ($is_crm) {
+                $sells->addSelect('transactions.crm_is_order_request');
+
+                if (request()->has('crm_is_order_request')) {
+                    $sells->where('transactions.crm_is_order_request', 1);
                 }
             }
 
@@ -201,6 +258,10 @@ class SellController extends Controller
                 $sells->where('transactions.created_by', request()->input('created_by'));
             }
 
+            if (!empty(request()->input('status'))) {
+                $sells->where('transactions.status', request()->input('status'));
+            }
+
             if (!empty(request()->input('sales_cmsn_agnt'))) {
                 $sells->where('transactions.commission_agent', request()->input('sales_cmsn_agnt'));
             }
@@ -208,19 +269,29 @@ class SellController extends Controller
             if (!empty(request()->input('service_staffs'))) {
                 $sells->where('transactions.res_waiter_id', request()->input('service_staffs'));
             }
-            $only_shipments = request()->only_shipments == 'true' ? true : false;
-            if ($only_shipments) {
-                $sells->whereNotNull('transactions.shipping_status');
-            }
 
-            if (!empty(request()->input('shipping_status'))) {
-                $sells->where('transactions.shipping_status', request()->input('shipping_status'));
+            $only_pending_shipments = request()->only_pending_shipments == 'true' ? true : false;
+            if ($only_pending_shipments) {
+                $sells->where('transactions.shipping_status', '!=', 'delivered')
+                        ->whereNotNull('transactions.shipping_status');
+                $only_shipments = true;
             }
 
             if (!empty(request()->input('shipping_status'))) {
                 $sells->where('transactions.shipping_status', request()->input('shipping_status'));
             }
             
+            if (!empty(request()->input('for_dashboard_sales_order'))) {
+                $sells->whereIn('transactions.status', ['partial', 'ordered'])
+                    ->orHavingRaw('so_qty_remaining > 0');
+            }
+
+            if ($sale_type == 'sales_order') {
+                if (!auth()->user()->can('so.view_all') && auth()->user()->can('so.view_own')) {
+                    $sells->where('transactions.created_by', request()->session()->get('user.id'));
+                }
+            }
+
             $sells->groupBy('transactions.id');
 
             if (!empty(request()->suspended)) {
@@ -258,11 +329,11 @@ class SellController extends Controller
             if ($this->businessUtil->isModuleEnabled('subscription')) {
                 $sells->addSelect('transactions.is_recurring', 'transactions.recur_parent_id');
             }
-
+            $sales_order_statuses = Transaction::sales_order_statuses();
             $datatable = Datatables::of($sells)
                 ->addColumn(
                     'action',
-                    function ($row) use ($only_shipments, $is_admin) {
+                    function ($row) use ($only_shipments, $is_admin, $sale_type) {
                         $html = '<div class="btn-group">
                                     <button type="button" class="btn btn-info dropdown-toggle btn-xs" 
                                         data-toggle="dropdown" aria-expanded="false">' .
@@ -272,7 +343,7 @@ class SellController extends Controller
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-left" role="menu">' ;
 
-                        if (auth()->user()->can("sell.view") || auth()->user()->can("direct_sell.access") || auth()->user()->can("view_own_sell_only")) {
+                        if (auth()->user()->can("sell.view") || auth()->user()->can("direct_sell.view") || auth()->user()->can("view_own_sell_only")) {
                             $html .= '<li><a href="#" data-href="' . action("SellController@show", [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="fas fa-eye" aria-hidden="true"></i> ' . __("messages.view") . '</a></li>';
                         }
                         if (!$only_shipments) {
@@ -280,16 +351,40 @@ class SellController extends Controller
                                 if (auth()->user()->can("sell.update")) {
                                     $html .= '<li><a target="_blank" href="' . action('SellPosController@edit', [$row->id]) . '"><i class="fas fa-edit"></i> ' . __("messages.edit") . '</a></li>';
                                 }
+                            } elseif ($row->type == 'sales_order') {
+                                if (auth()->user()->can("so.update")) {
+                                    $html .= '<li><a target="_blank" href="' . action('SellController@edit', [$row->id]) . '"><i class="fas fa-edit"></i> ' . __("messages.edit") . '</a></li>';
+                                }
                             } else {
-                                if (auth()->user()->can("direct_sell.access")) {
+                                if (auth()->user()->can("direct_sell.update")) {
                                     $html .= '<li><a target="_blank" href="' . action('SellController@edit', [$row->id]) . '"><i class="fas fa-edit"></i> ' . __("messages.edit") . '</a></li>';
                                 }
                             }
 
-                            if (auth()->user()->can("direct_sell.delete") || auth()->user()->can("sell.delete")) {
-                                $html .= '<li><a href="' . action('SellPosController@destroy', [$row->id]) . '" class="delete-sale"><i class="fas fa-trash"></i> ' . __("messages.delete") . '</a></li>';
+                            $delete_link = '<li><a href="' . action('SellPosController@destroy', [$row->id]) . '" class="delete-sale"><i class="fas fa-trash"></i> ' . __("messages.delete") . '</a></li>';
+                            if ($row->is_direct_sale == 0) {
+                                if (auth()->user()->can("sell.delete")) {
+                                    $html .= $delete_link;
+                                }
+                            } elseif ($row->type == 'sales_order') {
+                                if (auth()->user()->can("so.delete")) {
+                                    $html .= $delete_link;
+                                }
+                            } else {
+                                if (auth()->user()->can("direct_sell.delete")) {
+                                    $html .= $delete_link;
+                                }
                             }
                         }
+
+                        if (config('constants.enable_download_pdf') && auth()->user()->can("print_invoice") && $sale_type != 'sales_order') {
+                            $html .= '<li><a href="' . route('sell.downloadPdf', [$row->id]) . '" target="_blank"><i class="fas fa-print" aria-hidden="true"></i> ' . __("lang_v1.download_pdf") . '</a></li>';
+
+                            if (!empty($row->shipping_status)) {
+                                $html .= '<li><a href="' . route('packing.downloadPdf', [$row->id]) . '" target="_blank"><i class="fas fa-print" aria-hidden="true"></i> ' . __("lang_v1.download_paking_pdf") . '</a></li>';
+                            }
+                        }
+                        
                         if (auth()->user()->can("sell.view") || auth()->user()->can("direct_sell.access")) {
                             if (!empty($row->document)) {
                                 $document_name = !empty(explode("_", $row->document, 2)[1]) ? explode("_", $row->document, 2)[1] : $row->document ;
@@ -300,27 +395,37 @@ class SellController extends Controller
                             }
                         }
 
-                        if (auth()->user()->can("print_invoice")) {
-                            $html .= '<li><a href="#" class="print-invoice" data-href="' . route('sell.printInvoice', [$row->id]) . '"><i class="fas fa-print" aria-hidden="true"></i> ' . __("lang_v1.print_invoice") . '</a></li>
-                                <li><a href="#" class="print-invoice" data-href="' . route('sell.printInvoice', [$row->id]) . '?package_slip=true"><i class="fas fa-file-alt" aria-hidden="true"></i> ' . __("lang_v1.packing_slip") . '</a></li>';
-                        }
                         if ($is_admin || auth()->user()->hasAnyPermission(['access_shipping', 'access_own_shipping', 'access_commission_agent_shipping']) ) {
                             $html .= '<li><a href="#" data-href="' . action('SellController@editShipping', [$row->id]) . '" class="btn-modal" data-container=".view_modal"><i class="fas fa-truck" aria-hidden="true"></i>' . __("lang_v1.edit_shipping") . '</a></li>';
                         }
-                        $html .= '<li class="divider"></li>';
-                        if (!$only_shipments) {
-                            if ($row->payment_status != "paid" && (auth()->user()->can("sell.create") || auth()->user()->can("direct_sell.access")) && auth()->user()->can("sell.payments")) {
-                                $html .= '<li><a href="' . action('TransactionPaymentController@addPayment', [$row->id]) . '" class="add_payment_modal"><i class="fas fa-money-bill-alt"></i> ' . __("purchase.add_payment") . '</a></li>';
+                            
+                        if ($row->type == 'sell') {
+                            if (auth()->user()->can("print_invoice")) {
+                                $html .= '<li><a href="#" class="print-invoice" data-href="' . route('sell.printInvoice', [$row->id]) . '"><i class="fas fa-print" aria-hidden="true"></i> ' . __("lang_v1.print_invoice") . '</a></li>
+                                    <li><a href="#" class="print-invoice" data-href="' . route('sell.printInvoice', [$row->id]) . '?package_slip=true"><i class="fas fa-file-alt" aria-hidden="true"></i> ' . __("lang_v1.packing_slip") . '</a></li>';
                             }
+                            $html .= '<li class="divider"></li>';
+                            if (!$only_shipments) {
 
-                            $html .= '<li><a href="' . action('TransactionPaymentController@show', [$row->id]) . '" class="view_payment_modal"><i class="fas fa-money-bill-alt"></i> ' . __("purchase.view_payments") . '</a></li>';
+                                if(auth()->user()->can("sell.payments") || 
+                                    auth()->user()->can("edit_sell_payment") || 
+                                    auth()->user()->can("delete_sell_payment")){
 
-                            if (auth()->user()->can("sell.create")) {
-                                $html .= '<li><a href="' . action('SellController@duplicateSell', [$row->id]) . '"><i class="fas fa-copy"></i> ' . __("lang_v1.duplicate_sell") . '</a></li>
+                                    if ($row->payment_status != "paid") {
+                                        $html .= '<li><a href="' . action('TransactionPaymentController@addPayment', [$row->id]) . '" class="add_payment_modal"><i class="fas fa-money-bill-alt"></i> ' . __("purchase.add_payment") . '</a></li>';
+                                    }
 
-                                <li><a href="' . action('SellReturnController@add', [$row->id]) . '"><i class="fas fa-undo"></i> ' . __("lang_v1.sell_return") . '</a></li>
+                                    $html .= '<li><a href="' . action('TransactionPaymentController@show', [$row->id]) . '" class="view_payment_modal"><i class="fas fa-money-bill-alt"></i> ' . __("purchase.view_payments") . '</a></li>';
+                                }
 
-                                <li><a href="' . action('SellPosController@showInvoiceUrl', [$row->id]) . '" class="view_invoice_url"><i class="fas fa-eye"></i> ' . __("lang_v1.view_invoice_url") . '</a></li>';
+                                if (auth()->user()->can("sell.create") || auth()->user()->can("direct_sell.access")) {
+                                    // $html .= '<li><a href="' . action('SellController@duplicateSell', [$row->id]) . '"><i class="fas fa-copy"></i> ' . __("lang_v1.duplicate_sell") . '</a></li>';
+                                    
+
+                                    $html .= '<li><a href="' . action('SellReturnController@add', [$row->id]) . '"><i class="fas fa-undo"></i> ' . __("lang_v1.sell_return") . '</a></li>
+
+                                    <li><a href="' . action('SellPosController@showInvoiceUrl', [$row->id]) . '" class="view_invoice_url"><i class="fas fa-eye"></i> ' . __("lang_v1.view_invoice_url") . '</a></li>';
+                                }
                             }
 
                             $html .= '<li><a href="#" data-href="' . action('NotificationController@getTemplate', ["transaction_id" => $row->id,"template_for" => "new_sale"]) . '" class="btn-modal" data-container=".view_modal"><i class="fa fa-envelope" aria-hidden="true"></i>' . __("lang_v1.new_sale_notification") . '</a></li>';
@@ -390,7 +495,7 @@ class SellController extends Controller
 
                     return $return_due_html;
                 })
-                ->editColumn('invoice_no', function ($row) {
+                ->editColumn('invoice_no', function ($row) use($is_crm) {
                     $invoice_no = $row->invoice_no;
                     if (!empty($row->woocommerce_order_id)) {
                         $invoice_no .= ' <i class="fab fa-wordpress text-primary no-print" title="' . __('lang_v1.synced_from_woocommerce') . '"></i>';
@@ -404,6 +509,14 @@ class SellController extends Controller
 
                     if (!empty($row->recur_parent_id)) {
                         $invoice_no .= ' &nbsp;<small class="label bg-info label-round no-print" title="' . __('lang_v1.subscription_invoice') .'"><i class="fas fa-recycle"></i></small>';
+                    }
+
+                    if (!empty($row->is_export)) {
+                        $invoice_no .= '</br><small class="label label-default no-print" title="' . __('lang_v1.export') .'">'.__('lang_v1.export').'</small>';
+                    }
+
+                    if ($is_crm && !empty($row->crm_is_order_request)) {
+                        $invoice_no .= ' &nbsp;<small class="label bg-yellow label-round no-print" title="' . __('crm::lang.order_request') .'"><i class="fas fa-tasks"></i></small>';
                     }
 
                     return $invoice_no;
@@ -436,6 +549,20 @@ class SellController extends Controller
                     
                     return $html;
                 })
+                ->editColumn('status', function($row) use($sales_order_statuses, $is_admin){
+                    $status = '';
+
+                    if ($row->type == 'sales_order') {
+                        if ($is_admin && $row->status != 'completed') {
+                            $status = '<span class="edit-so-status label ' . $sales_order_statuses[$row->status]['class'] . '" data-href="'.action("SalesOrderController@getEditSalesOrderStatus", ['id' => $row->id]).'">' . $sales_order_statuses[$row->status]['label'] . '</span>';
+                        } else {
+                            $status = '<span class="label ' . $sales_order_statuses[$row->status]['class'] . '" >' . $sales_order_statuses[$row->status]['label'] . '</span>';
+                        }
+                    }
+
+                    return $status;
+                })
+                ->editColumn('so_qty_remaining', '{{@format_quantity($so_qty_remaining)}}')
                 ->setRowAttr([
                     'data-href' => function ($row) {
                         if (auth()->user()->can("sell.view") || auth()->user()->can("view_own_sell_only")) {
@@ -445,7 +572,7 @@ class SellController extends Controller
                         }
                     }]);
 
-            $rawColumns = ['final_total', 'action', 'total_paid', 'total_remaining', 'payment_status', 'invoice_no', 'discount_amount', 'tax_amount', 'total_before_tax', 'shipping_status', 'types_of_service_name', 'payment_methods', 'return_due', 'conatct_name'];
+            $rawColumns = ['final_total', 'action', 'total_paid', 'total_remaining', 'payment_status', 'invoice_no', 'discount_amount', 'tax_amount', 'total_before_tax', 'shipping_status', 'types_of_service_name', 'payment_methods', 'return_due', 'conatct_name', 'status'];
                 
             return $datatable->rawColumns($rawColumns)
                       ->make(true);
@@ -470,8 +597,13 @@ class SellController extends Controller
 
         $shipping_statuses = $this->transactionUtil->shipping_statuses();
 
+        $sources = $this->transactionUtil->getSources($business_id);
+        if ($is_woocommerce) {
+            $sources['woocommerce'] = 'Woocommerce';
+        }
+
         return view('sell.index')
-        ->with(compact('business_locations', 'customers', 'is_woocommerce', 'sales_representative', 'is_cmsn_agent_enabled', 'commission_agents', 'service_staffs', 'is_tables_enabled', 'is_service_staff_enabled', 'is_types_service_enabled', 'shipping_statuses'));
+        ->with(compact('business_locations', 'customers', 'is_woocommerce', 'sales_representative', 'is_cmsn_agent_enabled', 'commission_agents', 'service_staffs', 'is_tables_enabled', 'is_service_staff_enabled', 'is_types_service_enabled', 'shipping_statuses', 'sources'));
     }
 
     /**
@@ -481,9 +613,18 @@ class SellController extends Controller
      */
     public function create()
     {
-        if (!auth()->user()->can('direct_sell.access')) {
-            abort(403, 'Unauthorized action.');
+        $sale_type = request()->get('sale_type', '');
+
+        if ($sale_type == 'sales_order') {
+            if (!auth()->user()->can('so.create')) {
+                abort(403, 'Unauthorized action.');
+            }
+        } else {
+            if (!auth()->user()->can('direct_sell.access')) {
+                abort(403, 'Unauthorized action.');
+            }
         }
+        
 
         $business_id = request()->session()->get('user.business_id');
 
@@ -541,6 +682,10 @@ class SellController extends Controller
 
         $invoice_schemes = InvoiceScheme::forDropdown($business_id);
         $default_invoice_schemes = InvoiceScheme::getDefault($business_id);
+        if (!empty($default_location)) {
+            $default_invoice_schemes = InvoiceScheme::where('business_id', $business_id)
+                                        ->findorfail($default_location->invoice_scheme_id);
+        }
         $shipping_statuses = $this->transactionUtil->shipping_statuses();
 
         //Types of service
@@ -556,6 +701,27 @@ class SellController extends Controller
         }
 
         $status = request()->get('status', '');
+
+        $statuses = Transaction::sell_statuses();
+
+        if ($sale_type == 'sales_order') {
+            $status = 'ordered';
+        }
+
+        $is_order_request_enabled = false;
+        $is_crm = $this->moduleUtil->isModuleInstalled('Crm');
+        if ($is_crm) {
+            $crm_settings = Business::where('id', auth()->user()->business_id)
+                                ->value('crm_settings');
+            $crm_settings = !empty($crm_settings) ? json_decode($crm_settings, true) : [];
+
+            if (!empty($crm_settings['enable_order_request'])) {
+                $is_order_request_enabled = true;
+            }
+        }
+
+        //Added check because $users is of no use if enable_contact_assign if false
+        $users = config('constants.enable_contact_assign') ? User::forDropdown($business_id, false, false, false, true) : [];
 
         return view('sell.create')
             ->with(compact(
@@ -578,7 +744,11 @@ class SellController extends Controller
                 'types_of_service',
                 'accounts',
                 'shipping_statuses',
-                'status'
+                'status',
+                'sale_type',
+                'statuses',
+                'is_order_request_enabled',
+                'users'
             ));
     }
 
@@ -625,10 +795,19 @@ class SellController extends Controller
            ->latest()
            ->get();
 
+        $line_taxes = [];
         foreach ($sell->sell_lines as $key => $value) {
             if (!empty($value->sub_unit_id)) {
                 $formated_sell_line = $this->transactionUtil->recalculateSellLineTotals($business_id, $value);
                 $sell->sell_lines[$key] = $formated_sell_line;
+            }
+
+            if (!empty($taxes[$value->tax_id])) {
+                if(isset($line_taxes[$taxes[$value->tax_id]])) {
+                    $line_taxes[$taxes[$value->tax_id]] += ($value->item_tax * $value->quantity);
+                } else {
+                    $line_taxes[$taxes[$value->tax_id]] = ($value->item_tax * $value->quantity);
+                }
             }
         }
 
@@ -649,7 +828,14 @@ class SellController extends Controller
         $common_settings = session()->get('business.common_settings');
         $is_warranty_enabled = !empty($common_settings['enable_product_warranty']) ? true : false;
 
-        $statuses = Transaction::getSellStatuses();
+        $statuses = Transaction::sell_statuses();
+
+        if ($sell->type == 'sales_order') {
+            $sales_order_statuses = Transaction::sales_order_statuses(true);
+            $statuses = array_merge($statuses, $sales_order_statuses);
+        }
+        $status_color_in_activity = Transaction::sales_order_statuses();
+        $sales_orders = $sell->salesOrders();
 
         return view('sale_pos.show')
             ->with(compact(
@@ -662,7 +848,10 @@ class SellController extends Controller
                 'shipping_status_colors',
                 'is_warranty_enabled',
                 'activities',
-                'statuses'
+                'statuses', 
+                'status_color_in_activity',
+                'sales_orders',
+                'line_taxes'
             ));
     }
 
@@ -674,7 +863,7 @@ class SellController extends Controller
      */
     public function edit($id)
     {
-        if (!auth()->user()->can('direct_sell.access')) {
+        if (!auth()->user()->can('direct_sell.update') && !auth()->user()->can('so.update')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -699,8 +888,12 @@ class SellController extends Controller
 
         $transaction = Transaction::where('business_id', $business_id)
                             ->with(['price_group', 'types_of_service', 'media', 'media.uploaded_by_user'])
-                            ->where('type', 'sell')
+                            ->whereIn('type', ['sell', 'sales_order'])
                             ->findorfail($id);
+
+        if ($transaction->type == 'sales_order' && !auth()->user()->can('so.update')) {
+            abort(403, 'Unauthorized action.');
+        }
 
         $location_id = $transaction->location_id;
         $location_printer_type = BusinessLocation::find($location_id)->receipt_printer_type;
@@ -730,7 +923,7 @@ class SellController extends Controller
                         })
                         ->leftjoin('units', 'units.id', '=', 'p.unit_id')
                         ->where('transaction_sell_lines.transaction_id', $id)
-                        ->with(['warranties'])
+                        ->with(['warranties', 'so_line'])
                         ->select(
                             DB::raw("IF(pv.is_dummy = 0, CONCAT(p.name, ' (', pv.name, ':',variations.name, ')'), p.name) AS product_name"),
                             'p.id as product_id',
@@ -762,9 +955,11 @@ class SellController extends Controller
                             'transaction_sell_lines.res_service_staff_id',
                             'units.id as unit_id',
                             'transaction_sell_lines.sub_unit_id',
+                            'transaction_sell_lines.so_line_id',
                             DB::raw('vld.qty_available + transaction_sell_lines.quantity AS qty_available')
                         )
                         ->get();
+
         if (!empty($sell_details)) {
             foreach ($sell_details as $key => $value) {
                 //If modifier or combo sell line then unset
@@ -875,7 +1070,7 @@ class SellController extends Controller
 
         $pos_settings = empty($business_details->pos_settings) ? $this->businessUtil->defaultPosSettings() : json_decode($business_details->pos_settings, true);
 
-        $waiters = null;
+        $waiters = [];
         if ($this->productUtil->isModuleEnabled('service_staff') && !empty($pos_settings['inline_service_staff'])) {
             $waiters = $this->productUtil->serviceStaffDropdown($business_id);
         }
@@ -911,8 +1106,54 @@ class SellController extends Controller
         $is_warranty_enabled = !empty($common_settings['enable_product_warranty']) ? true : false;
         $warranties = $is_warranty_enabled ? Warranty::forDropdown($business_id) : [];
         
+        $statuses = Transaction::sell_statuses();
+
+        $is_order_request_enabled = false;
+        $is_crm = $this->moduleUtil->isModuleInstalled('Crm');
+        if ($is_crm) {
+            $crm_settings = Business::where('id', auth()->user()->business_id)
+                                ->value('crm_settings');
+            $crm_settings = !empty($crm_settings) ? json_decode($crm_settings, true) : [];
+
+            if (!empty($crm_settings['enable_order_request'])) {
+                $is_order_request_enabled = true;
+            }
+        }
+
+        $sales_orders = [];
+        if(!empty($pos_settings['enable_sales_order']) || $is_order_request_enabled) {
+            $sales_orders = Transaction::where('business_id', $business_id)
+                                ->where('type', 'sales_order')
+                                ->where('contact_id', $transaction->contact_id)
+                                ->where( function($q) use($transaction){
+                                    $q->where('status', '!=', 'completed');
+
+                                    if (!empty($transaction->sales_order_ids)) {
+                                        $q->orWhereIn('id', $transaction->sales_order_ids);
+                                    }
+                                })
+                                ->pluck('invoice_no', 'id');
+        }
+
+        $payment_types = $this->transactionUtil->payment_types($transaction->location_id, false, $business_id);
+
+        $payment_lines = $this->transactionUtil->getPaymentDetails($id);
+        //If no payment lines found then add dummy payment line.
+        if (empty($payment_lines)) {
+            $payment_lines[] = $this->dummyPaymentLine;
+        }
+
+        $change_return = $this->dummyPaymentLine;
+
+        $customer_due = $this->transactionUtil->getContactDue($transaction->contact_id, $transaction->business_id);
+
+        $customer_due = $customer_due != 0 ? $this->transactionUtil->num_f($customer_due, true) : '';
+
+        //Added check because $users is of no use if enable_contact_assign if false
+        $users = config('constants.enable_contact_assign') ? User::forDropdown($business_id, false, false, false, true) : [];
+
         return view('sell.edit')
-            ->with(compact('business_details', 'taxes', 'sell_details', 'transaction', 'commission_agent', 'types', 'customer_groups', 'pos_settings', 'waiters', 'invoice_schemes', 'default_invoice_schemes', 'redeem_details', 'edit_discount', 'edit_price', 'accounts', 'shipping_statuses', 'warranties'));
+            ->with(compact('business_details', 'taxes', 'sell_details', 'transaction', 'commission_agent', 'types', 'customer_groups', 'pos_settings', 'waiters', 'invoice_schemes', 'default_invoice_schemes', 'redeem_details', 'edit_discount', 'edit_price', 'shipping_statuses', 'warranties', 'statuses', 'sales_orders', 'payment_types', 'accounts', 'payment_lines', 'change_return', 'is_order_request_enabled', 'customer_due', 'users'));
     }
 
     /**
@@ -922,7 +1163,7 @@ class SellController extends Controller
      */
     public function getDrafts()
     {
-        if (!auth()->user()->can('list_drafts')) {
+        if (!auth()->user()->can('draft.view_all') && !auth()->user()->can('draft.view_own')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -945,7 +1186,7 @@ class SellController extends Controller
      */
     public function getQuotations()
     {
-        if (!auth()->user()->can('list_quotations')) {
+        if (!auth()->user()->can('quotation.view_all') && !auth()->user()->can('quotation.view_own')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -1000,12 +1241,24 @@ class SellController extends Controller
                     'sub_status',
                     DB::raw('COUNT( DISTINCT tsl.id) as total_items'),
                     DB::raw('SUM(tsl.quantity) as total_quantity'),
-                    DB::raw("CONCAT(COALESCE(u.surname, ''), ' ', COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as added_by")
+                    DB::raw("CONCAT(COALESCE(u.surname, ''), ' ', COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, '')) as added_by"),
+                    'transactions.is_export'
                 );
                 
             if ($is_quotation == 1) {
                 $sells->where('transactions.sub_status', 'quotation');
+
+                if (!auth()->user()->can('quotation.view_all') && auth()->user()->can('quotation.view_own')) {
+                    $sells->where('transactions.created_by', request()->session()->get('user.id'));
+                }
+
+            } else {
+                if (!auth()->user()->can('draft.view_all') && auth()->user()->can('draft.view_own')) {
+                    $sells->where('transactions.created_by', request()->session()->get('user.id'));
+                }
             }
+
+
             $permitted_locations = auth()->user()->permitted_locations();
             if ($permitted_locations != 'all') {
                 $sells->whereIn('transactions.location_id', $permitted_locations);
@@ -1044,52 +1297,85 @@ class SellController extends Controller
             $sells->groupBy('transactions.id');
 
             return Datatables::of($sells)
-                ->addColumn(
-                    'action',
-                    '<div class="btn-group">
-                        <button type="button" class="btn btn-info dropdown-toggle btn-xs" 
-                            data-toggle="dropdown" aria-expanded="false">' .
-                            __("messages.actions") .
-                            '<span class="caret"></span><span class="sr-only">Toggle Dropdown
-                            </span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-right" role="menu">
-                            <li>
-                            <a href="#" data-href="{{action(\'SellController@show\', [$id])}}" class="btn-modal" data-container=".view_modal"><i class="fas fa-eye" aria-hidden="true"></i> @lang("messages.view")</a>
-                            </li>
-                    @if($is_direct_sale == 1)
-                        <li>
-                        <a target="_blank" href="{{action(\'SellController@edit\', [$id])}}"><i class="fas fa-edit"></i>  @lang("messages.edit")</a>
-                        </li>
-                    @else
-                    <li>
-                    <a target="_blank" href="{{action(\'SellPosController@edit\', [$id])}}"><i class="fas fa-edit"></i>  @lang("messages.edit")</a>
-                    </li>
-                    @endif
-                    <li>
-                        <a href="#" class="print-invoice" data-href="{{route(\'sell.printInvoice\', [$id])}}"><i class="fas fa-print" aria-hidden="true"></i> @lang("messages.print")</a>
-                    </li> 
-                    @if( (auth()->user()->can("sell.create") || auth()->user()->can("direct_sell.access")) && config("constants.enable_convert_draft_to_invoice"))
-                        <li>
-                        <a href="{{action(\'SellPosController@convertToInvoice\', [$id])}}" class="convert-draft"><i class="fas fa-sync-alt"></i>  @lang("lang_v1.convert_to_invoice")</a>
-                        </li> 
-                    @endif
-                    @if($sub_status != "proforma")
-                    <li>
-                    <a href="{{action(\'SellPosController@convertToProforma\', [$id])}}" class="convert-to-proforma"><i class="fas fa-sync-alt"></i>  @lang("lang_v1.convert_to_proforma")</a>
-                    </li> 
-                    @endif
-                    <li>
-                    <a href="{{action(\'SellPosController@destroy\', [$id])}}" class="delete-sale"><i class="fas fa-trash"></i>  @lang("messages.delete")</a>
-                    </li>
-                    @if($sub_status == "quotation")
-                    <li><a href="{{action("SellPosController@showInvoiceUrl", [$id])}}" class="view_invoice_url"><i class="fas fa-eye"></i> @lang("lang_v1.view_quote_url")</a></li>
-                    <li><a href="#" data-href="{{ action("NotificationController@getTemplate", ["transaction_id" => $id,"template_for" => "new_quotation"])}}" class="btn-modal" data-container=".view_modal"><i class="fa fa-envelope" aria-hidden="true"></i>' . __("lang_v1.new_quotation_notification") . '</a></li>
-                    @endif
-                    </ul>
-                    </div>
-                    '
-                )
+                 ->addColumn(
+                    'action', function ($row) {
+                        $html = '<div class="btn-group">
+                                <button type="button" class="btn btn-info dropdown-toggle btn-xs" 
+                                    data-toggle="dropdown" aria-expanded="false">' .
+                                    __("messages.actions") .
+                                    '<span class="caret"></span><span class="sr-only">Toggle Dropdown
+                                    </span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-right" role="menu">
+                                    <li>
+                                    <a href="#" data-href="'.action('SellController@show', [$row->id]).'" class="btn-modal" data-container=".view_modal">
+                                        <i class="fas fa-eye" aria-hidden="true"></i>'.__("messages.view").'
+                                    </a>
+                                    </li>' ;
+
+                        if (auth()->user()->can('draft.update') || auth()->user()->can('quotation.update')) {
+                            if($row->is_direct_sale == 1) {
+                                $html .= '<li>
+                                            <a target="_blank" href="'.action('SellController@edit', [$row->id]).'">
+                                                <i class="fas fa-edit"></i>' .__("messages.edit").'
+                                            </a>
+                                        </li>';
+                            } else {
+                                $html .= '<li>
+                                            <a target="_blank" href="'.action('SellPosController@edit', [$row->id]).'">
+                                                <i class="fas fa-edit"></i>'.  __("messages.edit").'
+                                            </a>
+                                        </li>';
+                            }
+                        }
+
+                        $html .= '<li>
+                                    <a href="#" class="print-invoice" data-href="'.route('sell.printInvoice', [$row->id]).'"><i class="fas fa-print" aria-hidden="true"></i>'. __("messages.print").'</a>
+                                </li>';
+
+
+                        if(config("constants.enable_download_pdf")) {
+                            $sub_status = $row->sub_status == 'proforma' ? 'proforma' : '';
+                            $html .= '<li>
+                                        <a href="'.route('quotation.downloadPdf', ['id' => $row->id, 'sub_status' => $sub_status]).'" target="_blank">
+                                            <i class="fas fa-print" aria-hidden="true"></i>'.__("lang_v1.download_pdf"). '
+                                        </a>
+                                    </li>';
+                        }
+
+                        if( (auth()->user()->can("sell.create") || auth()->user()->can("direct_sell.access")) && config("constants.enable_convert_draft_to_invoice")) {
+                            $html .= '<li>
+                                        <a href="'.action('SellPosController@convertToInvoice', [$row->id]).'" class="convert-draft"><i class="fas fa-sync-alt"></i>'.__("lang_v1.convert_to_invoice").'</a>
+                                    </li>';
+                        }
+
+                        if($row->sub_status != "proforma") {
+                            $html .= '<li>
+                                        <a href="'.action('SellPosController@convertToProforma', [$row->id]).'" class="convert-to-proforma"><i class="fas fa-sync-alt"></i>'.__("lang_v1.convert_to_proforma").'</a>
+                                    </li>';
+                        }
+
+                        if (auth()->user()->can('draft.delete') || auth()->user()->can('quotation.delete')) {
+                            $html .= '<li>
+                                <a href="'.action('SellPosController@destroy', [$row->id]).'" class="delete-sale"><i class="fas fa-trash"></i>'.__("messages.delete").'</a>
+                                </li>';
+                        }
+
+                        if($row->sub_status == "quotation") {
+                            $html .= '<li>
+                                        <a href="'.action("SellPosController@showInvoiceUrl", [$row->id]).'" class="view_invoice_url"><i class="fas fa-eye"></i>'.__("lang_v1.view_quote_url").'</a>
+                                    </li>
+                                    <li>
+                                        <a href="#" data-href="'.action("NotificationController@getTemplate", ["transaction_id" => $row->id,"template_for" => "new_quotation"]).'" class="btn-modal" data-container=".view_modal"><i class="fa fa-envelope" aria-hidden="true"></i>' . __("lang_v1.new_quotation_notification") . '
+                                        </a>
+                                    </li>';
+                        }
+
+                        $html .= '</ul></div>';
+
+                        return $html;
+
+                })
                 ->removeColumn('id')
                 ->editColumn('invoice_no', function ($row) {
                     $invoice_no = $row->invoice_no;
@@ -1101,6 +1387,10 @@ class SellController extends Controller
                         $invoice_no .= '<br><span class="label bg-gray">' . __('lang_v1.proforma_invoice') . '</span>';
                     }
 
+                    if (!empty($row->is_export)) {
+                        $invoice_no .= '</br><small class="label label-default no-print" title="' . __('lang_v1.export') .'">'.__('lang_v1.export').'</small>';
+                    }
+                    
                     return $invoice_no;
                 })
                 ->editColumn('transaction_date', '{{@format_date($transaction_date)}}')
@@ -1228,8 +1518,14 @@ class SellController extends Controller
                                 ->findorfail($id);
         $shipping_statuses = $this->transactionUtil->shipping_statuses();
 
+        $activities = Activity::forSubject($transaction)
+           ->with(['causer', 'subject'])
+           ->where('activity_log.description', 'shipping_edited')
+           ->latest()
+           ->get();
+
         return view('sell.partials.edit_shipping')
-               ->with(compact('transaction', 'shipping_statuses'));
+               ->with(compact('transaction', 'shipping_statuses', 'activities'));
     }
 
     /**
@@ -1261,7 +1557,8 @@ class SellController extends Controller
 
             $transaction->update($input);
 
-            $this->transactionUtil->activityLog($transaction, 'shipping_edited', $transaction_before);
+            $activity_property = ['update_note' => $request->input('shipping_note', '')];
+            $this->transactionUtil->activityLog($transaction, 'shipping_edited', $transaction_before, $activity_property);
 
             $output = ['success' => 1,
                             'msg' => trans("lang_v1.updated_success")
@@ -1331,5 +1628,16 @@ class SellController extends Controller
 
             return view('sell.view_media')->with(compact('medias', 'title'));
         }
+    }
+
+    public function resetMapping()
+    {
+        if (!auth()->user()->can('superadmin')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        Artisan::call('pos:mapPurchaseSell');
+
+        echo "Mapping reset success";exit;
     }
 }

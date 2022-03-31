@@ -13,6 +13,11 @@
                 $lot_no_line_id = $product->lot_no_line_id;
             }
         @endphp
+
+        @if($product->enable_stock == 1)
+            <br>
+            <small class="text-muted" style="white-space: nowrap;">@lang('report.current_stock'): <span class="qty_available_text">{{$product->formatted_qty_available}}</span> {{ $product->unit }}</small>
+        @endif
         @if(!empty($product->lot_numbers))
             <select class="form-control lot_number" name="products[{{$row_index}}][lot_no_line_id]">
                 <option value="">@lang('lang_v1.lot_n_expiry')</option>
@@ -66,7 +71,9 @@
         data-msg_max_default="@lang('validation.custom-messages.quantity_not_available', ['qty'=> $product->formatted_qty_available, 'unit' => $product->unit  ])"
          @endif >
         {{$product->unit}}
-        <input type="hidden" name="products[{{$row_index}}][unit_price]" class="form-control product_unit_price input_number" value="{{@num_format($product->last_purchased_price)}}">
+    </td>
+    <td>
+        <input type="text" name="products[{{$row_index}}][unit_price]" class="form-control product_unit_price input_number" value="{{@num_format($product->last_purchased_price)}}">
     </td>
     <td>
         <input type="text" readonly name="products[{{$row_index}}][price]" class="form-control product_line_total" value="{{@num_format($product->quantity_ordered*$product->last_purchased_price)}}">

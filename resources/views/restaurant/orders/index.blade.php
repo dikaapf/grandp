@@ -116,6 +116,27 @@
                     }
                 });
             });
+
+            $('.print_line_order').click( function(){
+                let data = {
+                    'line_id' : $(this).data('id'),
+                    'service_staff_id' : $("#service_staff_id").val()
+                };
+                $.ajax({
+                    method: "GET",
+                    url: '/modules/print-line-order',
+                    dataType: "json",
+                    data: data,
+                    success: function(result){
+                        if (result.success == 1 && result.html_content != '') {
+                            $('#receipt_section').html(result.html_content);
+                            __print_receipt('receipt_section');
+                        } else {
+                            toastr.error(result.msg);
+                        }
+                    }
+                });
+            });
         });
     </script>
 @endsection

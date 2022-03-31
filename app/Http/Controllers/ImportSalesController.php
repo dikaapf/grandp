@@ -244,7 +244,12 @@ class ImportSalesController extends Controller
 
                 $tax_id = null;
                 $item_tax = 0;
-                $price_before_tax = $line_data['unit_price'];
+                $line_discount = !empty($line_data['item_discount']) ? $line_data['item_discount'] : 0;
+
+                $unit_price = $line_data['unit_price'];
+
+                $price_before_tax = $line_data['unit_price'] - $line_discount;
+                $price_inc_tax = $price_before_tax;
                 if (!empty($line_data['item_tax'])) {
                     $tax = TaxRate::where('business_id', $business_id)
                                 ->where('name', $line_data['item_tax'])
@@ -254,19 +259,17 @@ class ImportSalesController extends Controller
                         throw new \Exception(__('lang_v1.import_sale_tax_not_found', ['row' => $row_index, 'tax_name' => $line_data['item_tax']]));
                     } 
                     $tax_id = $tax->id;
-                    $price_before_tax = $this->transactionUtil->calc_percentage_base($line_data['unit_price'], $tax->amount);
-                    $item_tax = $line_data['unit_price'] - $price_before_tax;
-                }
+                    $item_tax = $this->transactionUtil->calc_percentage($price_before_tax, $tax->amount);
+                    $price_inc_tax = $price_before_tax + $item_tax;
 
-                $line_discount = !empty($line_data['item_discount']) ? $line_data['item_discount'] : 0;
-                $unit_price = $price_before_tax + $line_discount;
+                }
 
                 $temp = [
                     'product_id' => $variation->product_id,
                     'variation_id' => $variation->id,
                     'quantity' => $line_data['quantity'],
                     'unit_price' => $unit_price,
-                    'unit_price_inc_tax' => $line_data['unit_price'],
+                    'unit_price_inc_tax' => $price_inc_tax,
                     'line_discount_type' => 'fixed',
                     'line_discount_amount' => $line_discount,
                     'item_tax' => $item_tax,

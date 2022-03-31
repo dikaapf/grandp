@@ -35,6 +35,12 @@
 						{!! Form::select('expense_category_id', $expense_categories, null, ['class' => 'form-control select2', 'placeholder' => __('messages.please_select')]); !!}
 					</div>
 				</div>
+				<div class="col-md-4">
+					<div class="form-group">
+			            {!! Form::label('expense_sub_category_id', __('product.sub_category') . ':') !!}
+			              {!! Form::select('expense_sub_category_id', [],  null, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2']); !!}
+			          </div>
+				</div>
 				<div class="col-sm-4">
 					<div class="form-group">
 						{!! Form::label('ref_no', __('purchase.ref_no').':') !!}
@@ -128,8 +134,8 @@
 		</div>
 	</div>
 	@endcomponent
-	<div class="col-sm-12">
-		<button type="submit" class="btn btn-primary pull-right">@lang('messages.save')</button>
+	<div class="col-sm-12 text-center">
+		<button type="submit" class="btn btn-primary btn-big">@lang('messages.save')</button>
 	</div>
 {!! Form::close() !!}
 </section>

@@ -56,4 +56,7 @@
 "sale_date" => "Data de venda",
 "list_pos" => "lista de POS",
 "edit_sale" => "Editar venda",
+"shipping"=>"Envio",
+"shipping_details"=>"Detalhes de envio",
+"shipping_charges"=>"Custos de envio",
 ];

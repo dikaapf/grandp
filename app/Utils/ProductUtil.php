@@ -625,7 +625,7 @@ class ProductUtil extends Util
             if (!empty($product['modifier_price'])) {
                 foreach ($product['modifier_price'] as $key => $modifier_price) {
                     $modifier_price = $uf_number ? $this->num_uf($modifier_price) : $modifier_price;
-                    $uf_modifier_price = $this->num_uf($modifier_price);
+                    $uf_modifier_price = $uf_number ? $this->num_uf($modifier_price): $modifier_price;
                     $modifier_qty = isset($product['modifier_quantity'][$key]) ? $product['modifier_quantity'][$key] : 0;
                     $modifier_total = $uf_modifier_price * $modifier_qty;
                     $output['total_before_tax'] += $modifier_total;
@@ -743,7 +743,8 @@ class ProductUtil extends Util
         $products = $query->select(
             DB::raw("(SUM(tsl.quantity) - COALESCE(SUM(tsl.quantity_returned), 0)) as total_unit_sold"),
             'p.name as product',
-            'u.short_name as unit'
+            'u.short_name as unit',
+            'p.sku'
         )->whereNull('tsl.parent_sell_line_id')
                         ->groupBy('tsl.product_id')
                         ->orderBy('total_unit_sold', 'desc')
@@ -1165,11 +1166,12 @@ class ProductUtil extends Util
             $new_quantity = $this->num_uf($data['quantity']) * $multiplier;
 
             $new_quantity_f = $this->num_f($new_quantity);
+            $old_qty = 0;
             //update existing purchase line
             if (isset($data['purchase_line_id'])) {
                 $purchase_line = PurchaseLine::findOrFail($data['purchase_line_id']);
                 $updated_purchase_line_ids[] = $purchase_line->id;
-                $old_qty = $this->num_f($purchase_line->quantity);
+                $old_qty = $purchase_line->quantity;
 
                 $this->updateProductStock($before_status, $transaction, $data['product_id'], $data['variation_id'], $new_quantity, $purchase_line->quantity, $currency_details);
             } else {
@@ -1195,6 +1197,7 @@ class ProductUtil extends Util
             $purchase_line->mfg_date = !empty($data['mfg_date']) ? $this->uf_date($data['mfg_date']) : null;
             $purchase_line->exp_date = !empty($data['exp_date']) ? $this->uf_date($data['exp_date']) : null;
             $purchase_line->sub_unit_id = !empty($data['sub_unit_id']) ? $data['sub_unit_id'] : null;
+            $purchase_line->purchase_order_line_id = !empty($data['purchase_order_line_id']) ? $data['purchase_order_line_id'] : null;
         
             $updated_purchase_lines[] = $purchase_line;
 
@@ -1209,6 +1212,9 @@ class ProductUtil extends Util
              
                 $this->updateProductFromPurchase($variation_data);
             }
+
+            //Update purchase order line quantity received
+            $this->updatePurchaseOrderLine($purchase_line->purchase_order_line_id, $purchase_line->quantity, $old_qty);
         }
 
         //unset deleted purchase lines
@@ -1230,9 +1236,21 @@ class ProductUtil extends Util
                             $delete_purchase_line->variation_id,
                             $transaction->location_id,
                             $delete_purchase_line->quantity
-                    );
+                        );
+                    }
+
+                    //If purchase order line set decrease quntity
+                    if (!empty($delete_purchase_line->purchase_order_line_id)) {
+                        $this->updatePurchaseOrderLine($delete_purchase_line->purchase_order_line_id, 0, $delete_purchase_line->quantity);
                     }
                 }
+
+                //unset if purchase order line from purchase lines if exists
+                if ($transaction->type == 'purchase_order') {
+                    PurchaseLine::whereIn('purchase_order_line_id', $delete_purchase_line_ids)
+                        ->update(['purchase_order_line_id' => null]);
+                }
+
                 //Delete deleted purchase lines
                 PurchaseLine::where('transaction_id', $transaction->id)
                         ->whereIn('id', $delete_purchase_line_ids)
@@ -1246,6 +1264,16 @@ class ProductUtil extends Util
         }
 
         return $delete_purchase_lines;
+    }
+
+    public function updatePurchaseOrderLine($purchase_order_line_id, $new_qty, $old_qty = 0)
+    {
+        $diff = $new_qty - $old_qty;
+        if (!empty($purchase_order_line_id) && !empty($diff)) {
+            $purchase_order_line = PurchaseLine::find($purchase_order_line_id);
+            $purchase_order_line->po_quantity_purchased += ($diff);
+            $purchase_order_line->save();
+        }
     }
 
     /**
@@ -1448,76 +1476,51 @@ class ProductUtil extends Util
      *
      * @return obj discount
      */
-    public function getProductDiscount($product, $business_id, $location_id, $is_cg = false, $is_spg = false, $variation_id = null)
+    public function getProductDiscount($product, $business_id, $location_id, $is_cg = false, $price_group = null, $variation_id = null)
     {
         $now = \Carbon::now()->toDateTimeString();
 
         //Search if both category and brand matches
-        $query1 = Discount::where('business_id', $business_id)
+        $query = Discount::where('business_id', $business_id)
                     ->where('location_id', $location_id)
                     ->where('is_active', 1)
                     ->where('starts_at', '<=', $now)
                     ->where('ends_at', '>=', $now)
-                    ->where('brand_id', $product->brand_id)
-                    ->where('category_id', $product->category_id)
+                    ->where( function($q) use($product, $variation_id) {
+                            $q->where( function($sub_q) use($product){
+                                if (!empty($product->brand_id)) {
+                                    $sub_q->where('brand_id', $product->brand_id);
+                                }
+                                if (!empty($product->category_id)) {
+                                    $sub_q->where('category_id', $product->category_id);
+                                }
+                            })
+                            ->orWhere(function($sub_q) use($product){
+                                $sub_q->whereRaw('(brand_id="' . $product->brand_id .'" AND category_id IS NULL)')
+                                ->orWhereRaw('(category_id="' . $product->category_id .'" AND brand_id IS NULL)');
+                            });
+
+                            if (!empty($variation_id)) {
+                                $q->orWhereHas('variations', function($sub_q) use ($variation_id){
+                                    $sub_q->where('variation_id', $variation_id);
+                                });
+                            }
+                    })
                     ->orderBy('priority', 'desc')
                     ->latest();
         if ($is_cg) {
-            $query1->where('applicable_in_cg', 1);
+            $query->where('applicable_in_cg', 1);
         }
-        if ($is_spg) {
-            $query1->where('applicable_in_spg', 1);
-        }
-
-        $discount = $query1->first();
-                    
-        //Search if either category or brand matches
-        if (empty($discount)) {
-            $query2 = Discount::where('business_id', $business_id)
-                    ->where('location_id', $location_id)
-                    ->where('is_active', 1)
-                    ->where('starts_at', '<=', $now)
-                    ->where('ends_at', '>=', $now)
-                    ->where(function ($q) use ($product) {
-                        $q->whereRaw('(brand_id="' . $product->brand_id .'" AND category_id IS NULL)')
-                        ->orWhereRaw('(category_id="' . $product->category_id .'" AND brand_id IS NULL)');
-                    })
-                    ->orderBy('priority', 'desc');
-            if ($is_cg) {
-                $query2->where('applicable_in_cg', 1);
-            }
-            if ($is_spg) {
-                $query2->where('applicable_in_spg', 1);
-            }
-            $discount = $query2->first();
+        if (!is_null($price_group)) {
+            $query->where( function($q) use($price_group){
+                $q->whereNull('spg')
+                    ->orWhere('spg', (string)$price_group);
+            });
+        } else {
+            $query->whereNull('spg');
         }
 
-        //Search if variation has discount
-        if (!empty($variation_id)) {
-          $query3 = Discount::where('business_id', $business_id)
-                      ->where('location_id', $location_id)
-                      ->where('is_active', 1)
-                      ->where('starts_at', '<=', $now)
-                      ->where('ends_at', '>=', $now)
-                      ->whereHas('variations', function($q) use ($variation_id){
-                        $q->where('variation_id', $variation_id);
-                      })
-                      ->orderBy('priority', 'desc')
-                      ->latest();
-          if ($is_cg) {
-              $query3->where('applicable_in_cg', 1);
-          }
-          if ($is_spg) {
-              $query3->where('applicable_in_spg', 1);
-          }
-          $discount_by_variation = $query3->first();
-          if (!empty($discount_by_variation) && !empty($discount)) {
-            $discount = $discount_by_variation->priority >= $discount->priority ? $discount_by_variation : $discount;
-          } else if (empty($discount)) {
-              $discount = $discount_by_variation;
-          }
-          
-        }
+        $discount = $query->first();
 
         if (!empty($discount)) {
             $discount->formated_starts_at = $this->format_date($discount->starts_at->toDateTimeString(), true);
@@ -1604,6 +1607,19 @@ class ProductUtil extends Util
 
                     if (in_array('lot', $search_fields)) {
                         $query->orWhere('pl.lot_number', 'like', '%' . $search_term .'%');
+                    }
+
+                    if (in_array('product_custom_field1', $search_fields)) {
+                        $query->orWhere('product_custom_field1', 'like', '%' . $search_term .'%');
+                    }
+                    if (in_array('product_custom_field2', $search_fields)) {
+                        $query->orWhere('product_custom_field2', 'like', '%' . $search_term .'%');
+                    }
+                    if (in_array('product_custom_field3', $search_fields)) {
+                        $query->orWhere('product_custom_field3', 'like', '%' . $search_term .'%');
+                    }
+                    if (in_array('product_custom_field4', $search_fields)) {
+                        $query->orWhere('product_custom_field4', 'like', '%' . $search_term .'%');
                     }
                 });
             }
@@ -1764,7 +1780,7 @@ class ProductUtil extends Util
                     AND (SAL.variation_id=variations.id)) as total_adjusted"),
             DB::raw("(SELECT SUM( COALESCE(pl.quantity - ($pl_query_string), 0) * purchase_price_inc_tax) FROM transactions 
                   JOIN purchase_lines AS pl ON transactions.id=pl.transaction_id
-                  WHERE transactions.status='received' AND transactions.location_id=vld.location_id 
+                  WHERE (transactions.status='received' OR transactions.type='purchase_return')  AND transactions.location_id=vld.location_id 
                   AND (pl.variation_id=variations.id)) as stock_price"),
             DB::raw("SUM(vld.qty_available) as stock"),
             'variations.sub_sku as sku',
@@ -1843,12 +1859,12 @@ class ProductUtil extends Util
                     ->leftjoin('purchase_lines as pl', 'pl.variation_id', '=', 'variations.id')
                     ->leftjoin('transactions as t', 'pl.transaction_id', '=', 't.id')
                     ->where('t.location_id', $location_id)
-                    ->where('t.status', 'received')
+                    //->where('t.status', 'received')
                     ->where('p.business_id', $business_id)
                     ->where('variations.id', $variation_id)
                     ->select(
-                        DB::raw("SUM(IF(t.type='purchase', pl.quantity, 0)) as total_purchase"),
-                        DB::raw("SUM(IF(t.type='purchase', pl.quantity_returned, 0)) as total_purchase_return"),
+                        DB::raw("SUM(IF(t.type='purchase' AND t.status='received', pl.quantity, 0)) as total_purchase"),
+                        DB::raw("SUM(IF(t.type='purchase' OR t.type='purchase_return', pl.quantity_returned, 0)) as total_purchase_return"),
                         DB::raw("SUM(pl.quantity_adjusted) as total_adjusted"),
                         DB::raw("SUM(IF(t.type='opening_stock', pl.quantity, 0)) as total_opening_stock"),
                         DB::raw("SUM(IF(t.type='purchase_transfer', pl.quantity, 0)) as total_purchase_transfer"),
@@ -1927,7 +1943,7 @@ class ProductUtil extends Util
                                         ->orWhere('rpl.variation_id', $variation_id)
                                         ->orWhere('rsl.variation_id', $variation_id);
                                 })
-                                ->whereIn('transactions.type', ['sell', 'purchase', 'stock_adjustment', 'opening_stock', 'sell_transfer', 'purchase_transfer', 'production_purchase', 'purchase_return', 'sell_return'])
+                                ->whereIn('transactions.type', ['sell', 'purchase', 'stock_adjustment', 'opening_stock', 'sell_transfer', 'purchase_transfer', 'production_purchase', 'purchase_return', 'sell_return', 'production_sell'])
                                 ->select(
                                     'transactions.id as transaction_id',
                                     'transactions.type as transaction_type',
@@ -1936,11 +1952,13 @@ class ProductUtil extends Util
                                     'rsl.quantity_returned as sell_return',
                                     'rpl.quantity_returned as purchase_return',
                                     'al.quantity as stock_adjusted',
+                                    'pl.quantity_returned as combined_purchase_return',
                                     'transactions.return_parent_id',
                                     'transactions.transaction_date',
                                     'transactions.status',
                                     'transactions.invoice_no',
-                                    'transactions.ref_no'
+                                    'transactions.ref_no',
+                                    'transactions.additional_notes'
                                 )
                                 ->orderBy('transactions.transaction_date', 'asc')
                                 ->get();
@@ -2000,9 +2018,13 @@ class ProductUtil extends Util
                     'type' => 'opening_stock',
                     'type_label' => __('report.opening_stock'),
                     'ref_no' => $stock_line->ref_no ?? '',
-                    'transaction_id' => $stock_line->transaction_id
+                    'transaction_id' => $stock_line->transaction_id,
+                    'additional_notes' => $stock_line->additional_notes
                 ];
             } elseif ($stock_line->transaction_type == 'sell_transfer') {
+                if ($stock_line->status != 'final') {
+                    continue;
+                }
                 $quantity_change = -1 * $stock_line->sell_line_quantity;
                 $stock += $quantity_change;
                 $stock_history_array[] = [
@@ -2015,6 +2037,10 @@ class ProductUtil extends Util
                     'transaction_id' => $stock_line->transaction_id
                 ];
             } elseif ($stock_line->transaction_type == 'purchase_transfer') {
+                if ($stock_line->status != 'received') {
+                    continue;
+                }
+                
                 $quantity_change = $stock_line->purchase_line_quantity;
                 $stock += $quantity_change;
                 $stock_history_array[] = [
@@ -2024,6 +2050,21 @@ class ProductUtil extends Util
                     'type' => 'purchase_transfer',
                     'type_label' => __('lang_v1.stock_transfers') . ' (' . __('lang_v1.in') . ')',
                     'ref_no' => $stock_line->ref_no,
+                    'transaction_id' => $stock_line->transaction_id
+                ];
+            } elseif ($stock_line->transaction_type == 'production_sell') {
+                if ($stock_line->status != 'final') {
+                    continue;
+                }
+                $quantity_change =  -1 * $stock_line->sell_line_quantity;
+                $stock += $quantity_change;
+                $stock_history_array[] = [
+                    'date' => $stock_line->transaction_date,
+                    'quantity_change' => $quantity_change,
+                    'stock' => $this->roundQuantity($stock),
+                    'type' => 'sell',
+                    'type_label' => __('manufacturing::lang.ingredient'),
+                    'ref_no' => '',
                     'transaction_id' => $stock_line->transaction_id
                 ];
             } elseif ($stock_line->transaction_type == 'production_purchase') {
@@ -2039,7 +2080,7 @@ class ProductUtil extends Util
                     'transaction_id' => $stock_line->transaction_id
                 ];
             } elseif ($stock_line->transaction_type == 'purchase_return') {
-                $quantity_change =  -1 * $stock_line->purchase_return;
+                $quantity_change =  -1 * ($stock_line->combined_purchase_return + $stock_line->purchase_return);
                 $stock += $quantity_change;
                 $stock_history_array[] = [
                     'date' => $stock_line->transaction_date,

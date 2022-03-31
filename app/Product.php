@@ -75,13 +75,6 @@ class Product extends Model
         return $this->belongsTo(\App\Unit::class);
     }
     /**
-    * Get the tipe dari merek.
-    */
-    public function tipe()
-    {
-        return $this->belongsTo(\App\Tipe::class);
-    }
-    /**
      * Get category associated with the product.
      */
     public function category()

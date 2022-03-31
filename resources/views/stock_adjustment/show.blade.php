@@ -50,6 +50,7 @@
 			                		<th>{{ __('lang_v1.lot_n_expiry') }}</th>
 			              		@endif
 								<th>@lang('sale.qty')</th>
+								<th>@lang('sale.unit_price')</th>
 								<th>@lang('sale.subtotal')</th>
 							</tr>
 							@foreach( $stock_adjustment->stock_adjustment_lines as $stock_adjustment_line )
@@ -58,14 +59,17 @@
 										{{ $stock_adjustment_line->variation->full_name }}
 									</td>
 									@if(!empty($lot_n_exp_enabled))
-			                			<td>{{ $stock_adjustment_line->lot_number ?? '--' }}
-						                  @if( session()->get('business.enable_product_expiry') == 1 && !empty($stock_adjustment_line->exp_date))
-						                    ({{@format_date($stock_adjustment_line->exp_date)}})
-						                  @endif
+						                <td>{{ $stock_adjustment_line->lot_details->lot_number ?? '--' }}
+						                    @if( session()->get('business.enable_product_expiry') == 1 && !empty($stock_adjustment_line->lot_details->exp_date))
+						                    ({{@format_date($stock_adjustment_line->lot_details->exp_date)}})
+						                    @endif
 						                </td>
-			              			@endif
+						            @endif
 									<td>
 										{{@format_quantity($stock_adjustment_line->quantity)}}
+									</td>
+									<td>
+										{{@num_format($stock_adjustment_line->unit_price)}}
 									</td>
 									<td>
 										{{@num_format($stock_adjustment_line->unit_price * $stock_adjustment_line->quantity)}}

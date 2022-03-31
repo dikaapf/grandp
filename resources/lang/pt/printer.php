@@ -13,7 +13,7 @@
 "all_your_printer" => "Todas as impressoras configuradas",
 "deleted_success" => "Impressora apagada com sucesso",
 "edit_printer_setting" => "Editar configurações da impressora",
-"receipt_type" => "Impressoras de tickets", 
+"receipt_printers" => "Impressoras de recibos", 
 "character_per_line" => "Caracteres por linha", 
 "printer_name" => "Nome da impressora",
 "updated_success" => "Impressora atualizada com sucesso",

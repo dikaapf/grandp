@@ -127,6 +127,7 @@
                                     <th>@lang('purchase.supplier')</th>
                                     <th>@lang('contact.tax_no')</th>
                                     <th>@lang('sale.total_amount')</th>
+                                    <th>@lang('lang_v1.payment_method')</th>
                                     <th>@lang('receipt.discount')</th>
                                     @foreach($taxes as $tax)
                                         <th>
@@ -139,6 +140,7 @@
                                 <tr class="bg-gray font-17 text-center footer-total">
                                     <td colspan="4"><strong>@lang('sale.total'):</strong></td>
                                     <td><span class="display_currency" id="sell_total" data-currency_symbol ="true"></span></td>
+                                    <td class="input_payment_method_count"></td>
                                     <td>&nbsp;</td>
                                     @foreach($taxes as $tax)
                                         <td>
@@ -158,6 +160,7 @@
                                     <th>@lang('contact.customer')</th>
                                     <th>@lang('contact.tax_no')</th>
                                     <th>@lang('sale.total_amount')</th>
+                                    <th>@lang('lang_v1.payment_method')</th>
                                     <th>@lang('receipt.discount')</th>
                                     @foreach($taxes as $tax)
                                         <th>
@@ -170,6 +173,7 @@
                                 <tr class="bg-gray font-17 text-center footer-total">
                                     <td colspan="4"><strong>@lang('sale.total'):</strong></td>
                                     <td><span class="display_currency" id="purchase_total" data-currency_symbol ="true"></span></td>
+                                    <td class="output_payment_method_count"></td>
                                     <td>&nbsp;</td>
                                     @foreach($taxes as $tax)
                                         <td>
@@ -188,6 +192,7 @@
                                     <th>@lang('purchase.ref_no')</th>
                                     <th>@lang('contact.tax_no')</th>
                                     <th>@lang('sale.total_amount')</th>
+                                    <th>@lang('lang_v1.payment_method')</th>
                                     @foreach($taxes as $tax)
                                         <th>
                                             {{$tax['name']}}
@@ -198,7 +203,11 @@
                             <tfoot>
                                 <tr class="bg-gray font-17 text-center footer-total">
                                     <td colspan="3"><strong>@lang('sale.total'):</strong></td>
-                                    <td><span class="display_currency" id="expense_total" data-currency_symbol ="true"></span></td>                                    @foreach($taxes as $tax)
+                                    <td>
+                                        <span class="display_currency" id="expense_total" data-currency_symbol ="true"></span>
+                                    </td> 
+                                    <td class="expense_payment_method_count"></td>
+                                    @foreach($taxes as $tax)
                                         <td>
                                             <span class="display_currency" id="total_expense_{{$tax['id']}}" data-currency_symbol ="true"></span>
                                         </td>
@@ -264,11 +273,15 @@
                 { data: 'contact_name', name: 'c.name' },
                 { data: 'tax_number', name: 'c.tax_number' },
                 { data: 'total_before_tax', name: 'total_before_tax' },
+                { data: 'payment_methods', orderable: false, "searchable": false},
                 { data: 'discount_amount', name: 'discount_amount' },
                 @foreach($taxes as $tax)
                 { data: "tax_{{$tax['id']}}", searchable: false, orderable: false },
                 @endforeach
             ],
+            "footerCallback": function ( row, data, start, end, display ) {
+                $('.input_payment_method_count').html(__count_status(data, 'payment_methods'));
+            },
             fnDrawCallback: function(oSettings) {
                 $('#sell_total').text(
                     sum_table_col($('#input_tax_table'), 'total_before_tax')
@@ -310,11 +323,15 @@
                             { data: 'contact_name', name: 'c.name' },
                             { data: 'tax_number', name: 'c.tax_number' },
                             { data: 'total_before_tax', name: 'total_before_tax' },
+                            { data: 'payment_methods', orderable: false, "searchable": false},
                             { data: 'discount_amount', name: 'discount_amount' },
                             @foreach($taxes as $tax)
                             { data: "tax_{{$tax['id']}}", searchable: false, orderable: false },
                             @endforeach
                         ],
+                        "footerCallback": function ( row, data, start, end, display ) {
+                            $('.output_payment_method_count').html(__count_status(data, 'payment_methods'));
+                        },
                         fnDrawCallback: function(oSettings) {
                             $('#purchase_total').text(
                                 sum_table_col($('#output_tax_table'), 'total_before_tax')
@@ -353,10 +370,14 @@
                             { data: 'ref_no', name: 'ref_no' },
                             { data: 'tax_number', name: 'c.tax_number' },
                             { data: 'total_before_tax', name: 'total_before_tax' },
+                            { data: 'payment_methods', orderable: false, "searchable": false},
                             @foreach($taxes as $tax)
                             { data: "tax_{{$tax['id']}}", searchable: false, orderable: false },
                             @endforeach
                         ],
+                        "footerCallback": function ( row, data, start, end, display ) {
+                            $('.expense_payment_method_count').html(__count_status(data, 'payment_methods'));
+                        },
                         fnDrawCallback: function(oSettings) {
                             $('#expense_total').text(
                                 sum_table_col($('#expense_tax_table'), 'total_before_tax')

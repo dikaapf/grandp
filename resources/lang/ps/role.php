@@ -86,7 +86,6 @@ return [
     'brand' => 'برانډ',
     'tax_rate' => 'د مالیې نرخ',
     'unit' => 'واحد',
-    'expense.access' => 'مصاریفو ته لاسرسۍ',
     'access_locations' =>'ځایونو ته لاسرسی',
     'all_locations' => 'ټول ځایونه',
     'dashboard' => 'کور',

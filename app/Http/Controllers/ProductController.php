@@ -63,8 +63,13 @@ class ProductController extends Controller
         }
         $business_id = request()->session()->get('user.business_id');
         $selling_price_group_count = SellingPriceGroup::countSellingPriceGroups($business_id);
+        $is_woocommerce = $this->moduleUtil->isModuleInstalled('Woocommerce');
 
         if (request()->ajax()) {
+            //Filter by location
+            $location_id = request()->get('location_id', null);
+            $permitted_locations = auth()->user()->permitted_locations();
+
             $query = Product::with(['media'])
                 ->leftJoin('brands', 'products.brand_id', '=', 'brands.id')
                 ->join('units', 'products.unit_id', '=', 'units.id')
@@ -72,13 +77,14 @@ class ProductController extends Controller
                 ->leftJoin('categories as c2', 'products.sub_category_id', '=', 'c2.id')
                 ->leftJoin('tax_rates', 'products.tax', '=', 'tax_rates.id')
                 ->join('variations as v', 'v.product_id', '=', 'products.id')
-                ->leftJoin('variation_location_details as vld', 'vld.variation_id', '=', 'v.id')
+                ->leftJoin('variation_location_details as vld', function($join) use ($permitted_locations){
+                    $join->on('vld.variation_id', '=', 'v.id');
+                    if ($permitted_locations != 'all') {
+                        $join->whereIn('vld.location_id', $permitted_locations);
+                    }
+                })
                 ->where('products.business_id', $business_id)
                 ->where('products.type', '!=', 'modifier');
-
-            //Filter by location
-            $location_id = request()->get('location_id', null);
-            $permitted_locations = auth()->user()->permitted_locations();
 
             if (!empty($location_id) && $location_id != 'none') {
                 if ($permitted_locations == 'all' || in_array($location_id, $permitted_locations)) {
@@ -121,8 +127,14 @@ class ProductController extends Controller
                 DB::raw('MIN(v.sell_price_inc_tax) as min_price'),
                 DB::raw('MAX(v.dpp_inc_tax) as max_purchase_price'),
                 DB::raw('MIN(v.dpp_inc_tax) as min_purchase_price')
+                );
 
-                )->groupBy('products.id');
+            //if woocomerce enabled add field to query
+            if ($is_woocommerce) {
+                $products->addSelect('woocommerce_disable_sync');
+            }
+            
+            $products->groupBy('products.id');
 
             $type = request()->get('type', null);
             if (!empty($type)) {
@@ -238,12 +250,16 @@ class ProductController extends Controller
                         return $html;
                     }
                 )
-                ->editColumn('product', function ($row) {
+                ->editColumn('product', function ($row) use ($is_woocommerce) {
                     $product = $row->is_inactive == 1 ? $row->product . ' <span class="label bg-gray">' . __("lang_v1.inactive") .'</span>' : $row->product;
 
                     $product = $row->not_for_selling == 1 ? $product . ' <span class="label bg-gray">' . __("lang_v1.not_for_selling") .
                         '</span>' : $product;
                     
+                    if ($is_woocommerce && !$row->woocommerce_disable_sync) {
+                        $product = $product .'<br><i class="fab fa-wordpress"></i>';
+                    }
+
                     return $product;
                 })
                 ->editColumn('image', function ($row) {
@@ -287,8 +303,7 @@ class ProductController extends Controller
         $brands = Brands::forDropdown($business_id);
 
         $units = Unit::forDropdown($business_id);
-        $list_type = Tipe::forDropdown($business_id);
-        
+
         $tax_dropdown = TaxRate::forBusinessDropdown($business_id, false);
         $taxes = $tax_dropdown['tax_rates'];
 
@@ -304,15 +319,12 @@ class ProductController extends Controller
         //list product screen filter from module
         $pos_module_data = $this->moduleUtil->getModuleData('get_filters_for_list_product_screen');
 
-        $is_woocommerce = $this->moduleUtil->isModuleInstalled('Woocommerce');
-
         return view('product.index')
             ->with(compact(
                 'rack_enabled',
                 'categories',
                 'brands',
                 'units',
-                'list_type',
                 'taxes',
                 'business_locations',
                 'show_manufacturing_data',
@@ -438,6 +450,10 @@ class ProductController extends Controller
 
             if (empty($product_details['sku'])) {
                 $product_details['sku'] = ' ';
+            }
+
+            if (!empty($product_details['alert_quantity'])) {
+                $product_details['alert_quantity'] = $this->productUtil->num_uf($product_details['alert_quantity']);
             }
 
             $expiry_enabled = $request->session()->get('business.enable_product_expiry');
@@ -662,7 +678,7 @@ class ProductController extends Controller
             $product->tax = $product_details['tax'];
             $product->barcode_type = $product_details['barcode_type'];
             $product->sku = $product_details['sku'];
-            $product->alert_quantity = $product_details['alert_quantity'];
+            $product->alert_quantity = $this->productUtil->num_uf($product_details['alert_quantity']);
             $product->tax_type = $product_details['tax_type'];
             $product->weight = $product_details['weight'];
             $product->product_custom_field1 = $product_details['product_custom_field1'];
@@ -1234,11 +1250,18 @@ class ProductController extends Controller
         
         //check in variation table if $count = 0
         if ($count == 0) {
-            $count = Variation::where('sub_sku', $sku)
+            $query2 = Variation::where('sub_sku', $sku)
                             ->join('products', 'variations.product_id', '=', 'products.id')
-                            ->where('product_id', '!=', $product_id)
-                            ->where('business_id', $business_id)
-                            ->count();
+                            ->where('business_id', $business_id);
+
+            if (!empty($product_id)) {
+                $query2->where('product_id', '!=', $product_id);
+            }
+
+            if (!empty($request->input('variation_id'))) {
+                $query2->where('variations.id', '!=', $request->input('variation_id'));
+            }
+            $count = $query2->count();
         }
         if ($count == 0) {
             echo "true";
@@ -1334,6 +1357,10 @@ class ProductController extends Controller
             }
             if (empty($product_details['sku'])) {
                 $product_details['sku'] = ' ';
+            }
+
+            if (!empty($product_details['alert_quantity'])) {
+                $product_details['alert_quantity'] = $this->productUtil->num_uf($product_details['alert_quantity']);
             }
 
             $expiry_enabled = $request->session()->get('business.enable_product_expiry');
@@ -2159,5 +2186,45 @@ class ProductController extends Controller
 
         return view('product.stock_history')
                 ->with(compact('product', 'business_locations'));
+    }
+
+    /**
+     * Toggle WooComerce sync
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function toggleWooCommerceSync(Request $request)
+    {
+        
+        try {
+            $selected_products = $request->input('woocommerce_products_sync');
+            $woocommerce_disable_sync = $request->input('woocommerce_disable_sync');
+
+            $business_id = $request->session()->get('user.business_id');
+            $product_ids = explode(',', $selected_products);
+            
+            DB::beginTransaction();
+                if ($this->moduleUtil->isModuleInstalled('Woocommerce')) {   
+                    Product::where('business_id', $business_id)
+                        ->whereIn('id', $product_ids)
+                        ->update(['woocommerce_disable_sync' => $woocommerce_disable_sync]);
+                }
+            DB::commit();
+            $output = [
+                'success' => 1,
+                'msg' => __("lang_v1.success")
+            ];
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::emergency("File:" . $e->getFile(). "Line:" . $e->getLine(). "Message:" . $e->getMessage());
+            
+            $output = [
+                'success' => 0,
+                    'msg' => __("messages.something_went_wrong")
+            ];
+        }
+
+        return $output;
     }
 }

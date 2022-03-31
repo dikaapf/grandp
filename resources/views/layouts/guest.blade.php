@@ -25,6 +25,9 @@
 
 <body>
     <div id="app"></div>
+    @if (session('status'))
+        <input type="hidden" id="status_span" data-status="{{ session('status.success') }}" data-msg="{{ session('status.msg') }}">
+    @endif
     @yield('content')
 
     <!--[if lt IE 9]>

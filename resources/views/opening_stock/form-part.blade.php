@@ -8,9 +8,9 @@
 			<div class="box-body">
 				<div class="row">
 					<div class="col-sm-12">
-						<table class="table table-condensed table-bordered table-th-green text-center table-striped add_opening_stock_table">
+						<table class="table table-condensed table-bordered text-center table-striped add_opening_stock_table">
 								<thead>
-								<tr>
+								<tr class="bg-green">
 									<th>@lang( 'product.product_name' )</th>
 									<th>@lang( 'lang_v1.quantity_left' )</th>
 									<th>@lang( 'purchase.unit_cost_before_tax' )</th>
@@ -21,6 +21,8 @@
 										<th>@lang( 'lang_v1.lot_number' )</th>
 									@endif
 									<th>@lang( 'purchase.subtotal_before_tax' )</th>
+									<th>@lang( 'lang_v1.date' )</th>
+									<th>@lang( 'brand.note' )</th>
 									<th>&nbsp;</th>
 								</tr>
 								</thead>
@@ -34,7 +36,9 @@
 			$purchases[$key][$variation->id][] = ['quantity' => 0, 
 			'purchase_price' => $variation->default_purchase_price,
 			'purchase_line_id' => null,
-			'lot_number' => null
+			'lot_number' => null,
+			'transaction_date' => null,
+			'purchase_line_note' => null
 			]
 		@endphp
 	@endif
@@ -52,6 +56,8 @@
 
 	$subtotal += $row_total;
 	$lot_number = $var['lot_number'];
+	$transaction_date = $var['transaction_date'];
+	$purchase_line_note = $var['purchase_line_note'];
 	@endphp
 
 <tr>
@@ -89,6 +95,14 @@
 		<span class="row_subtotal_before_tax">{{@num_format($row_total)}}</span>
 	</td>
 	<td>
+		<div class="input-group date">
+		{!! Form::text('stocks[' . $key . '][' . $variation->id . '][' . $sub_key . '][transaction_date]', $transaction_date , ['class' => 'form-control input-sm os_date', 'readonly']); !!}
+		</div>
+	</td>
+	<td>
+		{!! Form::textarea('stocks[' . $key . '][' . $variation->id . '][' . $sub_key . '][purchase_line_note]', $purchase_line_note , ['class' => 'form-control input-sm', 'rows' => 3 ]); !!}
+	</td>
+	<td>
 		@if($loop->index == 0)
 			<button type="button" class="btn btn-primary btn-xs add_stock_row" data-sub-key="{{ count($purchases[$key][$variation->id])}}" 
 				data-row-html='<tr>
@@ -118,11 +132,18 @@
 		<input class="form-control input-sm" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][lot_number]" type="text">
 	</td>
 	@endif
-
 	<td>
 		<span class="row_subtotal_before_tax">
 			0.00
 		</span>
+	</td>
+	<td>
+		<div class="input-group date">
+			<input class="form-control input-sm os_date" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][transaction_date]" type="text" readonly>
+		</div>
+	</td>
+	<td>
+		<textarea rows="3" class="form-control input-sm" name="stocks[{{$key}}][{{$variation->id}}][__subkey__][purchase_line_note]"></textarea>
 	</td>
 	<td>&nbsp;</td></tr>'
 	><i class="fa fa-plus"></i></button>

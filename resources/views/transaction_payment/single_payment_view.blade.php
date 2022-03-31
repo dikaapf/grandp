@@ -143,9 +143,7 @@
           <br>
           <div class="col-xs-6">
             <strong>@lang('purchase.amount') :</strong>
-            <span class="display_currency" data-currency_symbol="true">
-              {{$single_payment_line->amount}}
-            </span><br>
+            @format_currency($single_payment_line->amount)<br>
             <strong>@lang('lang_v1.payment_method') :</strong>
             {{ $payment_types[$single_payment_line->method] ?? '' }}<br>
             @if($single_payment_line->method == "card")

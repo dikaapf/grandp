@@ -14,14 +14,79 @@
     <h1> @lang('lang_v1.'.$type.'s')
         <small>@lang( 'contact.manage_your_contact', ['contacts' =>  __('lang_v1.'.$type.'s') ])</small>
     </h1>
-    <!-- <ol class="breadcrumb">
-        <li><a href="#"><i class="fa fa-dashboard"></i> Level</a></li>
-        <li class="active">Here</li>
-    </ol> -->
 </section>
 
 <!-- Main content -->
 <section class="content">
+    @component('components.filters', ['title' => __('report.filters')])
+    @if($type == 'customer')
+        <div class="col-md-3">
+            <div class="form-group">
+                <label>
+                    {!! Form::checkbox('has_sell_due', 1, false, ['class' => 'input-icheck', 'id' => 'has_sell_due']); !!} <strong>@lang('lang_v1.sell_due')</strong>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label>
+                    {!! Form::checkbox('has_sell_return', 1, false, ['class' => 'input-icheck', 'id' => 'has_sell_return']); !!} <strong>@lang('lang_v1.sell_return')</strong>
+                </label>
+            </div>
+        </div>
+    @elseif($type == 'supplier')
+        <div class="col-md-3">
+            <div class="form-group">
+                <label>
+                    {!! Form::checkbox('has_purchase_due', 1, false, ['class' => 'input-icheck', 'id' => 'has_purchase_due']); !!} <strong>@lang('report.purchase_due')</strong>
+                </label>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label>
+                    {!! Form::checkbox('has_purchase_return', 1, false, ['class' => 'input-icheck', 'id' => 'has_purchase_return']); !!} <strong>@lang('lang_v1.purchase_return')</strong>
+                </label>
+            </div>
+        </div>
+    @endif
+    <div class="col-md-3">
+        <div class="form-group">
+            <label>
+                {!! Form::checkbox('has_advance_balance', 1, false, ['class' => 'input-icheck', 'id' => 'has_advance_balance']); !!} <strong>@lang('lang_v1.advance_balance')</strong>
+            </label>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="form-group">
+            <label>
+                {!! Form::checkbox('has_opening_balance', 1, false, ['class' => 'input-icheck', 'id' => 'has_opening_balance']); !!} <strong>@lang('lang_v1.opening_balance')</strong>
+            </label>
+        </div>
+    </div>
+    @if($type == 'customer')
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="has_no_sell_from">@lang('lang_v1.has_no_sell_from'):</label>
+                {!! Form::select('has_no_sell_from', ['one_month' => __('lang_v1.one_month'), 'three_months' => __('lang_v1.three_months'), 'six_months' => __('lang_v1.six_months'), 'one_year' => __('lang_v1.one_year')], null, ['class' => 'form-control', 'id' => 'has_no_sell_from', 'placeholder' => __('messages.please_select')]); !!}
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="form-group">
+                <label for="cg_filter">@lang('lang_v1.customer_group'):</label>
+                {!! Form::select('cg_filter', $customer_groups, null, ['class' => 'form-control', 'id' => 'cg_filter']); !!}
+            </div>
+        </div>
+    @endif
+
+    <div class="col-md-3">
+        <div class="form-group">
+            <label for="status_filter">@lang('sale.status'):</label>
+            {!! Form::select('status_filter', ['active' => __('business.is_active'), 'inactive' => __('lang_v1.inactive')], null, ['class' => 'form-control', 'id' => 'status_filter', 'placeholder' => __('lang_v1.none')]); !!}
+        </div>
+    </div>
+    @endcomponent
     <input type="hidden" value="{{$type}}" id="contact_type">
     @component('components.widget', ['class' => 'box-primary', 'title' => __( 'contact.all_your_contact', ['contacts' => __('lang_v1.'.$type.'s') ])])
         @if(auth()->user()->can('supplier.create') || auth()->user()->can('customer.create') || auth()->user()->can('supplier.view_own') || auth()->user()->can('customer.view_own'))
@@ -129,8 +194,8 @@
                                     @lang('sale.total'):
                                 </strong>
                         </td>
-                        <td id="footer_contact_due"></td>
-                        <td id="footer_contact_return_due"></td>
+                        <td class="footer_contact_due"></td>
+                        <td class="footer_contact_return_due"></td>
                         <td></td>
                         <td></td>
                         <td></td>

@@ -144,4 +144,32 @@ class OrderController extends Controller
 
         return $output;
     }
+
+    public function printLineOrder(Request $request)
+    {   
+        try {
+            $business_id = request()->session()->get('user.business_id');
+            $waiter_id = request()->session()->get('user.id');
+            $line_id = $request->input('line_id');
+            if (!empty($request->input('service_staff_id'))) {
+                $waiter_id = $request->input('service_staff_id');
+            }
+
+            $line_orders = $this->restUtil->getLineOrders($business_id, ['waiter_id' => $waiter_id, 'line_id' => $line_id]);
+            $order = $line_orders[0];
+            $html_content = view('restaurant.partials.print_line_order', compact('order'))->render();
+            $output = [
+                'success' => 1,
+                'msg' => trans("lang_v1.success"),
+                'html_content' => $html_content
+            ];
+        } catch (Exception $e) {
+            $output = [
+                'success' => 0,
+                'msg' => trans("messages.something_went_wrong")
+            ];
+        }
+
+        return $output;
+    }
 }

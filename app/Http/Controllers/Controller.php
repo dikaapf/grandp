@@ -98,7 +98,8 @@ class Controller extends BaseController
             'autoScriptToLang' => true,
             'autoLangToFont' => true,
             'autoVietnamese' => true,
-            'autoArabic' => true
+            'autoArabic' => true,
+            'useSubstitutions' => true
         ]);
     }
 }

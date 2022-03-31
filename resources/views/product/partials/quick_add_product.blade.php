@@ -81,7 +81,7 @@
         <div class="col-sm-4" id="alert_quantity_div">
           <div class="form-group">
             {!! Form::label('alert_quantity', __('product.alert_quantity') . ':') !!}
-            {!! Form::number('alert_quantity', null, ['class' => 'form-control',
+            {!! Form::text('alert_quantity', null, ['class' => 'form-control input_number',
             'placeholder' => __('product.alert_quantity'), 'min' => '0']); !!}
           </div>
         </div>

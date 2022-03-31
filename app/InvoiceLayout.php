@@ -23,6 +23,7 @@ class InvoiceLayout extends Model
         'contact_custom_fields' => 'array',
         'location_custom_fields' => 'array',
         'common_settings' => 'array',
+        'qr_code_fields' => 'array',
     ];
 
     /**

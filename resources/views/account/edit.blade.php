@@ -34,6 +34,41 @@
                 </select>
             </div>
 
+            <label>@lang('lang_v1.account_details'):</label>
+            <table class="table table-striped">
+                <tr>
+                    <th>
+                        @lang('lang_v1.label')
+                    </th>
+                    <th>
+                        @lang('product.value')
+                    </th>
+                </tr>
+                @if(!empty($account->account_details))
+                    @foreach($account->account_details as $key => $account_detail)
+                        <tr>
+                            <td>
+                                {!! Form::text('account_details['.$key.'][label]', !empty($account->account_details[$key]['label'])? $account->account_details[$key]['label'] : null, ['class' => 'form-control']); !!}
+                            </td>
+                            <td>
+                                {!! Form::text('account_details['.$key.'][value]', !empty($account->account_details[$key]['value'])?$account->account_details[$key]['value']:null, ['class' => 'form-control']); !!}      
+                            </td>
+                        </tr>
+                    @endforeach
+                @else
+                    @for ($i = 0; $i < 6; $i++)
+                        <tr>
+                            <td>
+                                {!! Form::text('account_details['.$i.'][label]', null, ['class' => 'form-control']); !!}
+                            </td>
+                            <td>
+                                {!! Form::text('account_details['.$i.'][value]', null, ['class' => 'form-control']); !!}      
+                            </td>
+                        </tr>
+                    @endfor
+                @endif
+            </table>
+            
             <div class="form-group">
                 {!! Form::label('note', __( 'brand.note' )) !!}
                 {!! Form::textarea('note', $account->note, ['class' => 'form-control', 'placeholder' => __( 'brand.note' ), 'rows' => 4]); !!}

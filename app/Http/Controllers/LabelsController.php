@@ -8,6 +8,7 @@ use App\Utils\ProductUtil;
 use App\Utils\TransactionUtil;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\SellingPriceGroup;
 
 class LabelsController extends Controller
 {
@@ -43,19 +44,30 @@ class LabelsController extends Controller
 
         //Get products for the business
         $products = [];
+        $price_groups = [];
         if ($purchase_id) {
             $products = $this->transactionUtil->getPurchaseProducts($business_id, $purchase_id);
         } elseif ($product_id) {
             $products = $this->productUtil->getDetailsFromProduct($business_id, $product_id);
         }
 
+        //get price groups
+        $price_groups = [];
+        if(!empty($purchase_id) || !empty($product_id)){
+            $price_groups = SellingPriceGroup::where('business_id', $business_id)
+                                    ->active()
+                                    ->pluck('name', 'id');
+        }
+
         $barcode_settings = Barcode::where('business_id', $business_id)
                                 ->orWhereNull('business_id')
-                                ->select(DB::raw('CONCAT(name, ", ", COALESCE(description, "")) as name, id'))
-                                ->pluck('name', 'id');
+                                ->select(DB::raw('CONCAT(name, ", ", COALESCE(description, "")) as name, id, is_default'))
+                                ->get();
+        $default = $barcode_settings->where('is_default', 1)->first();
+        $barcode_settings = $barcode_settings->pluck('name', 'id');
 
         return view('labels.show')
-            ->with(compact('products', 'barcode_settings'));
+            ->with(compact('products', 'barcode_settings', 'default', 'price_groups'));
     }
 
     /**
@@ -73,9 +85,13 @@ class LabelsController extends Controller
             if (!empty($product_id)) {
                 $index = $request->input('row_count');
                 $products = $this->productUtil->getDetailsFromProduct($business_id, $product_id, $variation_id);
+
+                $price_groups = SellingPriceGroup::where('business_id', $business_id)
+                                            ->active()
+                                            ->pluck('name', 'id');
                 
                 return view('labels.partials.show_table_rows')
-                        ->with(compact('products', 'index'));
+                        ->with(compact('products', 'index', 'price_groups'));
             }
         }
     }
@@ -119,6 +135,15 @@ class LabelsController extends Controller
                 }
                 if (!empty($value['lot_number'])) {
                     $details->lot_number = $value['lot_number'];
+                }
+
+                if (!empty($value['price_group_id'])) {
+                    $tax_id = $print['price_type'] == 'inclusive' ? : $details->tax_id;
+
+                    $group_prices = $this->productUtil->getVariationGroupPrice($value['variation_id'], $value['price_group_id'], $tax_id);
+
+                    $details->sell_price_inc_tax = $group_prices['price_inc_tax'];
+                    $details->default_sell_price = $group_prices['price_exc_tax'];
                 }
 
                 for ($i=0; $i < $value['quantity']; $i++) {

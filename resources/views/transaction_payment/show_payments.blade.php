@@ -156,7 +156,7 @@
             @if($transaction->payment_status != 'paid')
                 <div class="row">
                     <div class="col-md-12">
-                        @if((auth()->user()->can('purchase.payments') && (in_array($transaction->type, ['purchase', 'purchase_return']) )) || (auth()->user()->can('sell.payments') && (in_array($transaction->type, ['sell', 'sell_return']))) || (auth()->user()->can('expense.access') ) )
+                        @if((auth()->user()->can('purchase.payments') && (in_array($transaction->type, ['purchase', 'purchase_return']))) || (auth()->user()->can('sell.payments') && (in_array($transaction->type, ['sell', 'sell_return']))) || ((auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense')) &&  $transaction->type == 'expense') )
                             <a href="{{ action('TransactionPaymentController@addPayment', [$transaction->id]) }}" class="btn btn-primary btn-xs pull-right add_payment_modal no-print"><i class="fa fa-plus" aria-hidden="true"></i> @lang("purchase.add_payment")</a>
                         @endif
                     </div>
@@ -183,24 +183,27 @@
                               <td>{{ $payment->payment_ref_no }}</td>
                               <td><span class="display_currency" data-currency_symbol="true">{{ $payment->amount }}</span></td>
                               <td>{{ $payment_types[$payment->method] ?? '' }}</td>
-                              <td>{{ $payment->note }}</td>
+                              <td>@if(!empty($payment->gateway)){{$payment->gateway}} - @endif {{ $payment->note }}</td>
                               @if($accounts_enabled)
                                 <td>{{$payment->payment_account->name ?? ''}}</td>
                               @endif
                               <td class="no-print" style="display: flex;">
-                              @if((auth()->user()->can('purchase.payments') && (in_array($transaction->type, ['purchase', 'purchase_return']) )) || (auth()->user()->can('sell.payments') && (in_array($transaction->type, ['sell', 'sell_return']))) || auth()->user()->can('expense.access') )
-                                @if($payment->method != 'advance')
-                                    <button type="button" class="btn btn-info btn-xs edit_payment" 
-                                data-href="{{action('TransactionPaymentController@edit', [$payment->id]) }}"><i class="glyphicon glyphicon-edit"></i></button>
+                              @if((auth()->user()->can('edit_purchase_payment') && (in_array($transaction->type, ['purchase', 'purchase_return']))) || (auth()->user()->can('edit_sell_payment') && (in_array($transaction->type, ['sell', 'sell_return']))) || ((auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense')) && $transaction->type == 'expense') )
+                                    @if($payment->method != 'advance')
+                                        <button type="button" class="btn btn-info btn-xs edit_payment" 
+                                    data-href="{{action('TransactionPaymentController@edit', [$payment->id]) }}"><i class="glyphicon glyphicon-edit"></i></button>
+                                    @endif
                                 @endif
-                                &nbsp; <button type="button" class="btn btn-danger btn-xs delete_payment" 
-                                data-href="{{ action('TransactionPaymentController@destroy', [$payment->id]) }}"
-                                ><i class="fa fa-trash" aria-hidden="true"></i></button>
-                                &nbsp;
+
+                                @if((auth()->user()->can('delete_purchase_payment') && (in_array($transaction->type, ['purchase', 'purchase_return']))) || (auth()->user()->can('delete_sell_payment') && (in_array($transaction->type, ['sell', 'sell_return']))) || ((auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense')) && $transaction->type == 'expense') )
+                                    &nbsp; <button type="button" class="btn btn-danger btn-xs delete_payment" 
+                                    data-href="{{ action('TransactionPaymentController@destroy', [$payment->id]) }}"
+                                    ><i class="fa fa-trash" aria-hidden="true"></i></button>
+                                @endif
+                              &nbsp;
                                 <button type="button" class="btn btn-primary btn-xs view_payment" data-href="{{ action('TransactionPaymentController@viewPayment', [$payment->id]) }}">
                                   <i class="fa fa-eye" aria-hidden="true"></i>
                                 </button>
-                              @endif
                               @if(!empty($payment->document_path))
                                 &nbsp;
                                 <a href="{{$payment->document_path}}" class="btn btn-success btn-xs" download="{{$payment->document_name}}"><i class="fa fa-download" data-toggle="tooltip" title="{{__('purchase.download_document')}}"></i></a>

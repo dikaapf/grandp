@@ -97,8 +97,10 @@ class RoleController extends Controller
 
         $module_permissions = $this->moduleUtil->getModuleData('user_permissions');
 
+        $common_settings = !empty(session('business.common_settings')) ? session('business.common_settings') : [];
+
         return view('role.create')
-                ->with(compact('selling_price_groups', 'module_permissions'));
+                ->with(compact('selling_price_groups', 'module_permissions', 'common_settings'));
     }
 
     /**
@@ -134,10 +136,17 @@ class RoleController extends Controller
                         ]);
 
                 //Include selling price group permissions
-                $spg_permissions = $request->input('spg_permissions');
+                $spg_permissions = $request->input('radio_option');
                 if (!empty($spg_permissions)) {
                     foreach ($spg_permissions as $spg_permission) {
                         $permissions[] = $spg_permission;
+                    }
+                }
+
+                $radio_options = $request->input('radio_option');
+                if (!empty($radio_options)) {
+                    foreach ($radio_options as $key => $value) {
+                        $permissions[] = $value;
                     }
                 }
 
@@ -202,8 +211,10 @@ class RoleController extends Controller
 
         $module_permissions = $this->moduleUtil->getModuleData('user_permissions');
 
+        $common_settings = !empty(session('business.common_settings')) ? session('business.common_settings') : [];
+
         return view('role.edit')
-            ->with(compact('role', 'role_permissions', 'selling_price_groups', 'module_permissions'));
+            ->with(compact('role', 'role_permissions', 'selling_price_groups', 'module_permissions', 'common_settings'));
     }
 
     /**
@@ -249,6 +260,13 @@ class RoleController extends Controller
                     if (!empty($spg_permissions)) {
                         foreach ($spg_permissions as $spg_permission) {
                             $permissions[] = $spg_permission;
+                        }
+                    }
+
+                    $radio_options = $request->input('radio_option');
+                    if (!empty($radio_options)) {
+                        foreach ($radio_options as $key => $value) {
+                            $permissions[] = $value;
                         }
                     }
 

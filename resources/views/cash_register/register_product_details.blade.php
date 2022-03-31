@@ -2,7 +2,7 @@
   <div class="col-md-12">
     <hr>
     <h3>@lang('lang_v1.product_sold_details_register')</h3>
-    <table class="table">
+    <table class="table table-condensed">
       <tr>
         <th>#</th>
         <th>@lang('brand.brands')</th>
@@ -22,7 +22,7 @@
             {{$detail->brand_name}}
           </td>
           <td>
-            {{$detail->total_quantity}}
+            {{@format_quantity($detail->total_quantity)}}
             @php
               $total_quantity += $detail->total_quantity;
             @endphp
@@ -41,6 +41,8 @@
       
       @php
         $total_amount += ($details['transaction_details']->total_tax - $details['transaction_details']->total_discount);
+
+        $total_amount += $details['transaction_details']->total_shipping_charges;
       @endphp
 
       <!-- Final details -->
@@ -62,6 +64,13 @@
             @lang('sale.discount'): (-)
             <span class="display_currency" data-currency_symbol="true">
               {{$details['transaction_details']->total_discount}}
+            </span>
+            <br/>
+          @endif
+          @if($details['transaction_details']->total_shipping_charges != 0)
+            @lang('lang_v1.total_shipping_charges'): (+)
+            <span class="display_currency" data-currency_symbol="true">
+              {{$details['transaction_details']->total_shipping_charges}}
             </span>
             <br/>
           @endif

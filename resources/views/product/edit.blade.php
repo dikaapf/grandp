@@ -28,11 +28,11 @@
               </div>
             </div>
 
-            <div class="col-sm-4 @if(!(session('business.enable_category') && session('business.enable_sub_category'))) hide @endif">
+            <div class="col-sm-4">
               <div class="form-group">
                 {!! Form::label('sku', __('product.sku')  . ':*') !!} @show_tooltip(__('tooltip.sku'))
                 {!! Form::text('sku', $product->sku, ['class' => 'form-control',
-                'placeholder' => __('product.sku'), 'required', 'readonly']); !!}
+                'placeholder' => __('product.sku'), 'required']); !!}
               </div>
             </div>
 
@@ -121,7 +121,7 @@
             <div class="col-sm-4" id="alert_quantity_div" @if(!$product->enable_stock) style="display:none" @endif>
               <div class="form-group">
                 {!! Form::label('alert_quantity', __('product.alert_quantity') . ':') !!} @show_tooltip(__('tooltip.alert_quantity'))
-                {!! Form::number('alert_quantity', $product->alert_quantity, ['class' => 'form-control',
+                {!! Form::text('alert_quantity', @format_quantity($product->alert_quantity), ['class' => 'form-control input_number',
                 'placeholder' => __('product.alert_quantity') , 'min' => '0']); !!}
               </div>
             </div>

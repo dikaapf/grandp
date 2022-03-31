@@ -58,6 +58,14 @@
                         <i class="fas fa-sync fa-spin fa-fw"></i>
                     </span>
                 </h3>
+                <div class="hide" id="total_payment_with_commsn_div">
+                    <h3 class="text-muted">
+                        {{ __('lang_v1.total_payment_with_commsn') }}: 
+                        <span id="total_payment_with_commsn">
+                            <i class="fas fa-sync fa-spin fa-fw"></i>
+                        </span>
+                    </h3>
+                </div>
                 <div class="hide" id="total_commission_div">
                     <h3 class="text-muted">
                         {{ __('lang_v1.total_sale_commission') }}: 
@@ -92,6 +100,12 @@
                     <li>
                         <a href="#sr_expenses_tab" data-toggle="tab" aria-expanded="true"><i class="fa fa-cog" aria-hidden="true"></i> @lang('expense.expenses')</a>
                     </li>
+
+                    @if(!empty($pos_settings['cmmsn_calculation_type']) && $pos_settings['cmmsn_calculation_type'] == 'payment_received')
+                        <li>
+                            <a href="#sr_payments_with_cmmsn_tab" data-toggle="tab" aria-expanded="true"><i class="fa fa-cog" aria-hidden="true"></i> @lang('lang_v1.payments_with_cmmsn')</a>
+                        </li>
+                    @endif
                 </ul>
 
                 <div class="tab-content">
@@ -106,6 +120,12 @@
                     <div class="tab-pane" id="sr_expenses_tab">
                         @include('report.partials.sales_representative_expenses')
                     </div>
+
+                    @if(!empty($pos_settings['cmmsn_calculation_type']) && $pos_settings['cmmsn_calculation_type'] == 'payment_received')
+                        <div class="tab-pane" id="sr_payments_with_cmmsn_tab">
+                            @include('report.partials.sales_representative_payments_with_cmmsn')
+                        </div>
+                    @endif
                 </div>
 
             </div>

@@ -122,7 +122,9 @@
         <div class="col-xs-12">
             @component('components.widget')
                 @slot('title')
-                    {{ __('lang_v1.purchase_sell_report_formula') }}  @show_tooltip(__('tooltip.over_all_sell_purchase'))
+                    {{ __('lang_v1.overall') }} 
+                    ((@lang('business.sale') - @lang('lang_v1.sell_return')) - (@lang('lang_v1.purchase') - @lang('lang_v1.purchase_return')) ) 
+                    @show_tooltip(__('tooltip.over_all_sell_purchase'))
                 @endslot
                 <h3 class="text-muted">
                     {{ __('report.sell_minus_purchase') }}: 

@@ -24,4 +24,16 @@
 @stop
 @section('javascript')
 	<script src="{{ asset('js/opening_stock.js?v=' . $asset_v) }}"></script>
+	<script type="text/javascript">
+		$(document).ready( function(){
+			$('.os_date').datetimepicker({
+		        format: moment_date_format + ' ' + moment_time_format,
+		        ignoreReadonly: true,
+		        widgetPositioning: {
+		            horizontal: 'right',
+		            vertical: 'bottom'
+		        }
+		    });
+		});
+	</script>
 @endsection

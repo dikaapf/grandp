@@ -10,6 +10,10 @@
     @endphp
 @endif
 
+@php
+    $whitelist = ['127.0.0.1', '::1'];
+@endphp
+
 <!DOCTYPE html>
 <html lang="{{ app()->getLocale() }}" dir="{{in_array(session()->get('user.language', config('app.locale')), config('constants.langs_rtl')) ? 'rtl' : 'ltr'}}">
     <head>
@@ -43,6 +47,10 @@
                 @include('layouts.partials.header-pos')
             @endif
 
+            @if(in_array($_SERVER['REMOTE_ADDR'], $whitelist))
+                <input type="hidden" id="__is_localhost" value="true">
+            @endif
+
             <!-- Content Wrapper. Contains page content -->
             <div class="@if(!$pos_layout) content-wrapper @endif">
                 <!-- empty div for vuejs -->
@@ -58,7 +66,12 @@
                 <input type="hidden" id="__precision" value="{{config('constants.currency_precision', 2)}}">
                 <input type="hidden" id="__quantity_precision" value="{{config('constants.quantity_precision', 2)}}">
                 <!-- End of currency related field-->
-
+                @can('view_export_buttons')
+                    <input type="hidden" id="view_export_buttons">
+                @endcan
+                @if(isMobile())
+                    <input type="hidden" id="__is_mobile">
+                @endif
                 @if (session('status'))
                     <input type="hidden" id="status_span" data-status="{{ session('status.success') }}" data-msg="{{ session('status.msg') }}">
                 @endif

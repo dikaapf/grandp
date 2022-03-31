@@ -7,6 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class CashRegister extends Model
 {
     /**
+     * The attributes that should be cast to native types.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'denominations' => 'array'
+    ];
+
+    /**
      * The attributes that aren't mass assignable.
      *
      * @var array

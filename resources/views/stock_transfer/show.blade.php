@@ -75,6 +75,7 @@
 				          <th>#</th>
 				          <th>@lang('sale.product')</th>
 				          <th>@lang('sale.qty')</th>
+				          <th>@lang('sale.unit_price')</th>
 				          <th>@lang('sale.subtotal')</th>
 				        </tr>
 				        @php 
@@ -100,7 +101,10 @@
 				                @endif
 				               @endif
 				            </td>
-				            <td>{{ @format_quantity($sell_lines->quantity) }} {{$sell_lines->product->unit->short_name ?? ""}}</td>
+				            <td>{{ @format_quantity($sell_lines->quantity) }} @if(!empty($sell_lines->sub_unit)) {{$sell_lines->sub_unit->short_name}} @else {{$sell_lines->product->unit->short_name}} @endif</td>
+				            <td>
+				            	<span class="display_currency" data-currency_symbol="true">{{ $sell_lines->unit_price_inc_tax}}</span>
+							</td>
 				            <td>
 				              <span class="display_currency" data-currency_symbol="true">{{ $sell_lines->unit_price_inc_tax * $sell_lines->quantity }}</span>
 				            </td>

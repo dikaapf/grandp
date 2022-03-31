@@ -27,6 +27,12 @@
           </div>
         </div>
         <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('expense_sub_category_id', __('product.sub_category')  . ':') !!}
+                  {!! Form::select('expense_sub_category_id', $sub_categories, $expense->expense_sub_category_id, ['placeholder' => __('messages.please_select'), 'class' => 'form-control select2']); !!}
+            </div>
+        </div>
+        <div class="col-sm-4">
           <div class="form-group">
             {!! Form::label('ref_no', __('purchase.ref_no').':*') !!}
             {!! Form::text('ref_no', $expense->ref_no, ['class' => 'form-control', 'required']); !!}
@@ -99,8 +105,8 @@
     </div>
   </div> <!--box end-->
   @include('expense.recur_expense_form_part')
-  <div class="col-sm-12">
-    <button type="submit" class="btn btn-primary pull-right">@lang('messages.update')</button>
+  <div class="col-sm-12 text-center">
+    <button type="submit" class="btn btn-primary btn-big">@lang('messages.update')</button>
   </div>
 
 {!! Form::close() !!}

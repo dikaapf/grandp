@@ -63,7 +63,6 @@
 "brand" => "Marca",
 "tax_rate" => "Taxa de imposto",
 "unit" => "Unit",
-"expense.access" => "Custos de acesso",
 "access_locations" => "Locais de acesso",
 "all_locations" => "Todos os locais",
 "dashboard" => "Painel", 

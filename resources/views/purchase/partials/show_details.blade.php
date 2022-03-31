@@ -1,6 +1,10 @@
 <div class="modal-header">
     <button type="button" class="close no-print" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-    <h4 class="modal-title" id="modalTitle"> @lang('purchase.purchase_details') (<b>@lang('purchase.ref_no'):</b> #{{ $purchase->ref_no }})
+    @php
+      $title = $purchase->type == 'purchase_order' ? __('lang_v1.purchase_order_details') : __('purchase.purchase_details');
+      $custom_labels = json_decode(session('business.custom_labels'), true);
+    @endphp
+    <h4 class="modal-title" id="modalTitle"> {{$title}} (<b>@lang('purchase.ref_no'):</b> #{{ $purchase->ref_no }})
     </h4>
 </div>
 <div class="modal-body">
@@ -13,17 +17,7 @@
     <div class="col-sm-4 invoice-col">
       @lang('purchase.supplier'):
       <address>
-        <strong>{{ $purchase->contact->supplier_business_name }}</strong>
-        {{ $purchase->contact->name }}
-        @if(!empty($purchase->contact->address_line_1))
-          <br>{{$purchase->contact->address_line_1}}
-        @endif
-        @if(!empty($purchase->contact->address_line_2))
-          <br>{{$purchase->contact->address_line_2}}
-        @endif
-        @if(!empty($purchase->contact->city) || !empty($purchase->contact->state) || !empty($purchase->contact->country))
-          <br>{{implode(',', array_filter([$purchase->contact->city, $purchase->contact->state, $purchase->contact->country, $purchase->contact->zip_code]))}}
-        @endif
+        {!! $purchase->contact->contact_address !!}
         @if(!empty($purchase->contact->tax_number))
           <br>@lang('contact.tax_no'): {{$purchase->contact->tax_number}}
         @endif
@@ -76,8 +70,71 @@
     <div class="col-sm-4 invoice-col">
       <b>@lang('purchase.ref_no'):</b> #{{ $purchase->ref_no }}<br/>
       <b>@lang('messages.date'):</b> {{ @format_date($purchase->transaction_date) }}<br/>
-      <b>@lang('purchase.purchase_status'):</b> {{ __('lang_v1.' . $purchase->status) }}<br>
-      <b>@lang('purchase.payment_status'):</b> {{ __('lang_v1.' . $purchase->payment_status) }}<br>
+      @if(!empty($purchase->status))
+        <b>@lang('purchase.purchase_status'):</b> @if($purchase->type == 'purchase_order'){{$po_statuses[$purchase->status]['label'] ?? ''}} @else {{ __('lang_v1.' . $purchase->status) }} @endif<br>
+      @endif
+      @if(!empty($purchase->payment_status))
+      <b>@lang('purchase.payment_status'):</b> {{ __('lang_v1.' . $purchase->payment_status) }}
+      @endif
+
+      @if(!empty($custom_labels['purchase']['custom_field_1']))
+        <br><strong>{{$custom_labels['purchase']['custom_field_1'] ?? ''}}: </strong> {{$purchase->custom_field_1}}
+      @endif
+      @if(!empty($custom_labels['purchase']['custom_field_2']))
+        <br><strong>{{$custom_labels['purchase']['custom_field_2'] ?? ''}}: </strong> {{$purchase->custom_field_2}}
+      @endif
+      @if(!empty($custom_labels['purchase']['custom_field_3']))
+        <br><strong>{{$custom_labels['purchase']['custom_field_3'] ?? ''}}: </strong> {{$purchase->custom_field_3}}
+      @endif
+      @if(!empty($custom_labels['purchase']['custom_field_4']))
+        <br><strong>{{$custom_labels['purchase']['custom_field_4'] ?? ''}}: </strong> {{$purchase->custom_field_4}}
+      @endif
+      @if(!empty($purchase_order_nos))
+            <strong>@lang('restaurant.order_no'):</strong>
+            {{$purchase_order_nos}}
+        @endif
+
+        @if(!empty($purchase_order_dates))
+            <br>
+            <strong>@lang('lang_v1.order_dates'):</strong>
+            {{$purchase_order_dates}}
+        @endif
+      @if($purchase->type == 'purchase_order')
+        @php
+          $custom_labels = json_decode(session('business.custom_labels'), true);
+        @endphp
+        <strong>@lang('sale.shipping'):</strong>
+        <span class="label @if(!empty($shipping_status_colors[$purchase->shipping_status])) {{$shipping_status_colors[$purchase->shipping_status]}} @else {{'bg-gray'}} @endif">{{$shipping_statuses[$purchase->shipping_status] ?? '' }}</span><br>
+        @if(!empty($purchase->shipping_address()))
+          {{$purchase->shipping_address()}}
+        @else
+          {{$purchase->shipping_address ?? '--'}}
+        @endif
+        @if(!empty($purchase->delivered_to))
+          <br><strong>@lang('lang_v1.delivered_to'): </strong> {{$purchase->delivered_to}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_1))
+          <br><strong>{{$custom_labels['shipping']['custom_field_1'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_1}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_2))
+          <br><strong>{{$custom_labels['shipping']['custom_field_2'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_2}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_3))
+          <br><strong>{{$custom_labels['shipping']['custom_field_3'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_3}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_4))
+          <br><strong>{{$custom_labels['shipping']['custom_field_4'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_4}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_5))
+          <br><strong>{{$custom_labels['shipping']['custom_field_5'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_5}}
+        @endif
+        @php
+          $medias = $purchase->media->where('model_media_type', 'shipping_document')->all();
+        @endphp
+        @if(count($medias))
+          @include('sell.partials.media_table', ['medias' => $medias])
+        @endif
+      @endif
     </div>
   </div>
 
@@ -90,13 +147,18 @@
             <tr class="bg-green">
               <th>#</th>
               <th>@lang('product.product_name')</th>
-              <th class="text-right">@lang('purchase.purchase_quantity')</th>
+              <th>@lang('product.sku')</th>
+              @if($purchase->type == 'purchase_order')
+                <th class="text-right">@lang( 'lang_v1.quantity_remaining' )</th>
+              @endif
+              <th class="text-right">@if($purchase->type == 'purchase_order') @lang('lang_v1.order_quantity') @else @lang('purchase.purchase_quantity') @endif</th>
               <th class="text-right">@lang( 'lang_v1.unit_cost_before_discount' )</th>
               <th class="text-right">@lang( 'lang_v1.discount_percent' )</th>
               <th class="no-print text-right">@lang('purchase.unit_cost_before_tax')</th>
               <th class="no-print text-right">@lang('purchase.subtotal_before_tax')</th>
               <th class="text-right">@lang('sale.tax')</th>
               <th class="text-right">@lang('purchase.unit_cost_after_tax')</th>
+              @if($purchase->type != 'purchase_order')
               <th class="text-right">@lang('purchase.unit_selling_price')</th>
               @if(session('business.enable_lot_number'))
                 <th>@lang('lang_v1.lot_number')</th>
@@ -104,6 +166,7 @@
               @if(session('business.enable_product_expiry'))
                 <th>@lang('product.mfg_date')</th>
                 <th>@lang('product.exp_date')</th>
+              @endif
               @endif
               <th class="text-right">@lang('sale.subtotal')</th>
             </tr>
@@ -121,6 +184,18 @@
                   - {{ $purchase_line->variations->name}}
                  @endif
               </td>
+              <td>
+                 @if( $purchase_line->product->type == 'variable')
+                  {{ $purchase_line->variations->sub_sku}}
+                  @else
+                  {{ $purchase_line->product->sku }}
+                 @endif
+              </td>
+              @if($purchase->type == 'purchase_order')
+              <td>
+                <span class="display_currency" data-is_quantity="true" data-currency_symbol="false">{{ $purchase_line->quantity - $purchase_line->po_quantity_purchased }}</span> @if(!empty($purchase_line->sub_unit)) {{$purchase_line->sub_unit->short_name}} @else {{$purchase_line->product->unit->short_name}} @endif
+              </td>
+              @endif
               <td><span class="display_currency" data-is_quantity="true" data-currency_symbol="false">{{ $purchase_line->quantity }}</span> @if(!empty($purchase_line->sub_unit)) {{$purchase_line->sub_unit->short_name}} @else {{$purchase_line->product->unit->short_name}} @endif</td>
               <td class="text-right"><span class="display_currency" data-currency_symbol="true">{{ $purchase_line->pp_without_discount}}</span></td>
               <td class="text-right"><span class="display_currency">{{ $purchase_line->discount_percent}}</span> %</td>
@@ -128,6 +203,7 @@
               <td class="no-print text-right"><span class="display_currency" data-currency_symbol="true">{{ $purchase_line->quantity * $purchase_line->purchase_price }}</span></td>
               <td class="text-right"><span class="display_currency" data-currency_symbol="true">{{ $purchase_line->item_tax }} </span> <br/><small>@if(!empty($taxes[$purchase_line->tax_id])) ( {{ $taxes[$purchase_line->tax_id]}} ) </small>@endif</td>
               <td class="text-right"><span class="display_currency" data-currency_symbol="true">{{ $purchase_line->purchase_price_inc_tax }}</span></td>
+              @if($purchase->type != 'purchase_order')
               @php
                 $sp = $purchase_line->variations->default_sell_price;
                 if(!empty($purchase_line->sub_unit->base_unit_multiplier)) {
@@ -142,23 +218,16 @@
 
               @if(session('business.enable_product_expiry'))
               <td>
-                @if( !empty($purchase_line->product->expiry_period_type) )
-                  @if(!empty($purchase_line->mfg_date))
+                @if(!empty($purchase_line->mfg_date))
                     {{ @format_date($purchase_line->mfg_date) }}
-                  @endif
-                @else
-                  @lang('product.not_applicable')
                 @endif
               </td>
               <td>
-                @if( !empty($purchase_line->product->expiry_period_type) )
-                  @if(!empty($purchase_line->exp_date))
+                @if(!empty($purchase_line->exp_date))
                     {{ @format_date($purchase_line->exp_date) }}
-                  @endif
-                @else
-                  @lang('product.not_applicable')
                 @endif
               </td>
+              @endif
               @endif
               <td class="text-right"><span class="display_currency" data-currency_symbol="true">{{ $purchase_line->purchase_price_inc_tax * $purchase_line->quantity }}</span></td>
             </tr>
@@ -172,6 +241,7 @@
   </div>
   <br>
   <div class="row">
+    @if(!empty($purchase->type == 'purchase'))
     <div class="col-sm-12 col-xs-12">
       <h4>{{ __('sale.payment_info') }}:</h4>
     </div>
@@ -216,7 +286,8 @@
         </table>
       </div>
     </div>
-    <div class="col-md-6 col-sm-12 col-xs-12">
+    @endif
+    <div class="col-md-6 col-sm-12 col-xs-12 @if($purchase->type == 'purchase_order') col-md-offset-6 @endif">
       <div class="table-responsive">
         <table class="table">
           <!-- <tr class="hide">
@@ -267,6 +338,34 @@
               <td><span class="display_currency pull-right" >{{ $purchase->shipping_charges }}</span></td>
             </tr>
           @endif
+          @if( !empty( $purchase->additional_expense_value_1 )  && !empty( $purchase->additional_expense_key_1 ))
+            <tr>
+              <th>{{ $purchase->additional_expense_key_1 }}:</th>
+              <td><b>(+)</b></td>
+              <td><span class="display_currency pull-right" >{{ $purchase->additional_expense_value_1 }}</span></td>
+            </tr>
+          @endif
+          @if( !empty( $purchase->additional_expense_value_2 )  && !empty( $purchase->additional_expense_key_2 ))
+            <tr>
+              <th>{{ $purchase->additional_expense_key_2 }}:</th>
+              <td><b>(+)</b></td>
+              <td><span class="display_currency pull-right" >{{ $purchase->additional_expense_value_2 }}</span></td>
+            </tr>
+          @endif
+          @if( !empty( $purchase->additional_expense_value_3 )  && !empty( $purchase->additional_expense_key_3 ))
+            <tr>
+              <th>{{ $purchase->additional_expense_key_3 }}:</th>
+              <td><b>(+)</b></td>
+              <td><span class="display_currency pull-right" >{{ $purchase->additional_expense_value_3 }}</span></td>
+            </tr>
+          @endif
+          @if( !empty( $purchase->additional_expense_value_4 ) && !empty( $purchase->additional_expense_key_4 ))
+            <tr>
+              <th>{{ $purchase->additional_expense_key_4 }}:</th>
+              <td><b>(+)</b></td>
+              <td><span class="display_currency pull-right" >{{ $purchase->additional_expense_value_4 }}</span></td>
+            </tr>
+          @endif
           <tr>
             <th>@lang('purchase.purchase_total'):</th>
             <td></td>
@@ -280,10 +379,22 @@
     <div class="col-sm-6">
       <strong>@lang('purchase.shipping_details'):</strong><br>
       <p class="well well-sm no-shadow bg-gray">
-        @if($purchase->shipping_details)
-          {{ $purchase->shipping_details }}
-        @else
-          --
+        {{ $purchase->shipping_details ?? '' }}
+
+        @if(!empty($purchase->shipping_custom_field_1))
+          <br><strong>{{$custom_labels['purchase_shipping']['custom_field_1'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_1}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_2))
+          <br><strong>{{$custom_labels['purchase_shipping']['custom_field_2'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_2}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_3))
+          <br><strong>{{$custom_labels['purchase_shipping']['custom_field_3'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_3}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_4))
+          <br><strong>{{$custom_labels['purchase_shipping']['custom_field_4'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_4}}
+        @endif
+        @if(!empty($purchase->shipping_custom_field_5))
+          <br><strong>{{$custom_labels['purchase_shipping']['custom_field_5'] ?? ''}}: </strong> {{$purchase->shipping_custom_field_5}}
         @endif
       </p>
     </div>
@@ -298,12 +409,14 @@
       </p>
     </div>
   </div>
+  @if(!empty($activities))
   <div class="row">
     <div class="col-md-12">
           <strong>{{ __('lang_v1.activities') }}:</strong><br>
           @includeIf('activity_log.activities', ['activity_type' => 'purchase'])
       </div>
   </div>
+  @endif
 
   {{-- Barcode --}}
   <div class="row print_section">

@@ -70,7 +70,7 @@ class TransactionPaymentController extends Controller
 
             $transaction_before = $transaction->replicate();
 
-            if (!auth()->user()->can('purchase.payments') || !auth()->user()->can('sell.payments')) {
+            if (!(auth()->user()->can('purchase.payments') || auth()->user()->can('sell.payments') || auth()->user()->can('all_expense.access') || auth()->user()->can('view_own_expense'))) {
                 abort(403, 'Unauthorized action.');
             }
 
@@ -163,7 +163,7 @@ class TransactionPaymentController extends Controller
      */
     public function show($id)
     {
-        if (!auth()->user()->can('purchase.create') && !auth()->user()->can('sell.create')) {
+        if (!(auth()->user()->can('sell.payments') || auth()->user()->can('purchase.payments'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -196,7 +196,7 @@ class TransactionPaymentController extends Controller
      */
     public function edit($id)
     {
-        if (!auth()->user()->can('purchase.create') && !auth()->user()->can('sell.create')) {
+        if (!auth()->user()->can('edit_purchase_payment') && !auth()->user()->can('edit_sell_payment')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -229,7 +229,7 @@ class TransactionPaymentController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments')) {
+        if (!auth()->user()->can('edit_purchase_payment') && !auth()->user()->can('edit_sell_payment') && !auth()->user()->can('all_expense.access') && !auth()->user()->can('view_own_expense')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -312,7 +312,7 @@ class TransactionPaymentController extends Controller
      */
     public function destroy($id)
     {
-        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments')) {
+        if (!auth()->user()->can('delete_purchase_payment') && !auth()->user()->can('delete_sell_payment') && !auth()->user()->can('all_expense.access') && !auth()->user()->can('view_own_expense')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -376,7 +376,7 @@ class TransactionPaymentController extends Controller
      */
     public function addPayment($transaction_id)
     {
-        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments')) {
+        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments') && !auth()->user()->can('all_expense.access') && !auth()->user()->can('view_own_expense')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -429,7 +429,7 @@ class TransactionPaymentController extends Controller
      */
     public function getPayContactDue($contact_id)
     {
-        if (!auth()->user()->can('purchase.create')) {
+        if (!(auth()->user()->can('sell.payments') || auth()->user()->can('purchase.payments'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -438,7 +438,7 @@ class TransactionPaymentController extends Controller
 
             $due_payment_type = request()->input('type');
             $query = Contact::where('contacts.id', $contact_id)
-                            ->join('transactions AS t', 'contacts.id', '=', 't.contact_id');
+                            ->leftjoin('transactions AS t', 'contacts.id', '=', 't.contact_id');
             if ($due_payment_type == 'purchase') {
                 $query->select(
                     DB::raw("SUM(IF(t.type = 'purchase', final_total, 0)) as total_purchase"),
@@ -531,7 +531,7 @@ class TransactionPaymentController extends Controller
      */
     public function postPayContactDue(Request  $request)
     {
-        if (!auth()->user()->can('purchase.create') && !auth()->user()->can('sell.create')) {
+        if (!(auth()->user()->can('sell.payments') || auth()->user()->can('purchase.payments'))) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -564,7 +564,13 @@ class TransactionPaymentController extends Controller
      */
     public function viewPayment($payment_id)
     {
-        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments')) {
+        if (!(auth()->user()->can('sell.payments') || 
+                auth()->user()->can('purchase.payments') ||
+                auth()->user()->can("edit_sell_payment") ||
+                auth()->user()->can("delete_sell_payment") ||
+                auth()->user()->can("edit_purchase_payment") || 
+                auth()->user()->can("delete_purchase_payment")
+            )) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -582,7 +588,7 @@ class TransactionPaymentController extends Controller
                         ->where('parent_id', $payment_id)
                         ->with(['transaction', 'transaction.contact', 'transaction.location', 'transaction.transaction_for'])
                         ->first();
-                $transaction = $child_payment->transaction;
+                $transaction = !empty($child_payment) ? $child_payment->transaction : null;
             }
 
             $payment_types = $this->transactionUtil->payment_types(null, false, $business_id);
@@ -600,7 +606,13 @@ class TransactionPaymentController extends Controller
      */
     public function showChildPayments($payment_id)
     {
-        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments')) {
+        if (!(auth()->user()->can('sell.payments') || 
+                auth()->user()->can('purchase.payments') ||
+                auth()->user()->can("edit_sell_payment") ||
+                auth()->user()->can("delete_sell_payment") ||
+                auth()->user()->can("edit_purchase_payment") || 
+                auth()->user()->can("delete_purchase_payment")
+            )) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -628,7 +640,13 @@ class TransactionPaymentController extends Controller
 
     public function getOpeningBalancePayments($contact_id)
     {
-        if (!auth()->user()->can('purchase.payments') && !auth()->user()->can('sell.payments')) {
+        if (!(auth()->user()->can('sell.payments') || 
+                auth()->user()->can('purchase.payments') ||
+                auth()->user()->can("edit_sell_payment") ||
+                auth()->user()->can("delete_sell_payment") ||
+                auth()->user()->can("edit_purchase_payment") || 
+                auth()->user()->can("delete_purchase_payment")
+            )) {
             abort(403, 'Unauthorized action.');
         }
 

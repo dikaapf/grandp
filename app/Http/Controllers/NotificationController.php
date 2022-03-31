@@ -12,22 +12,23 @@ use App\Restaurant\Booking;
 
 use App\Transaction;
 use App\Utils\NotificationUtil;
-
+use App\Utils\TransactionUtil;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
     protected $notificationUtil;
-
+    protected $transactionUtil;
     /**
      * Constructor
      *
-     * @param NotificationUtil $notificationUtil
+     * @param NotificationUtil $notificationUtil, TransactionUtil $transactionUtil
      * @return void
      */
-    public function __construct(NotificationUtil $notificationUtil)
+    public function __construct(NotificationUtil $notificationUtil, TransactionUtil $transactionUtil)
     {
         $this->notificationUtil = $notificationUtil;
+        $this->transactionUtil = $transactionUtil;
     }
 
     /**
@@ -80,9 +81,11 @@ class NotificationController extends Controller
         //for send_ledger notification template
         $start_date = request()->input('start_date');
         $end_date = request()->input('end_date');
+        $ledger_format = request()->input('format');
+        $location_id = request()->input('location_id');
 
         return view('notification.show_template')
-                ->with(compact('notification_template', 'transaction', 'tags', 'template_name', 'contact', 'start_date', 'end_date'));
+                ->with(compact('notification_template', 'transaction', 'tags', 'template_name', 'contact', 'start_date', 'end_date', 'ledger_format', 'location_id'));
     }
 
     /**
@@ -113,6 +116,8 @@ class NotificationController extends Controller
             $business_id = request()->session()->get('business.id');
 
             $transaction = !empty($transaction_id) ? Transaction::find($transaction_id) : null;
+
+            
 
             $orig_data = [
                 'email_body' => $data['email_body'],
@@ -147,6 +152,12 @@ class NotificationController extends Controller
             $whatsapp_link = '';
             if (array_key_exists($request->input('template_for'), $customer_notifications)) {
                 if (in_array('email', $notification_type)) {
+
+                    if (!empty($request->input('attach_pdf'))) {
+                        $data['pdf_name'] = 'INVOICE-'.$transaction->invoice_no.'.pdf';
+                        $data['pdf'] = $this->transactionUtil->getEmailAttachmentForGivenTransaction($business_id, $transaction_id, true);
+                    }
+                    
                     Notification::route('mail', $emails_array)
                                     ->notify(new CustomerNotification($data));
 

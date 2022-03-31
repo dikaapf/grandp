@@ -83,10 +83,13 @@
 								<th class="col-sm-4 text-center">	
 									@lang('sale.product')
 								</th>
-								<th class="col-sm-3 text-center">
+								<th class="col-sm-2 text-center">
 									@lang('sale.qty')
 								</th>
-								<th class="col-sm-3 text-center">
+								<th class="col-sm-2 text-center">
+									@lang('sale.unit_price')
+								</th>
+								<th class="col-sm-2 text-center">
 									@lang('sale.subtotal')
 								</th>
 								<th class="col-sm-2 text-center"><i class="fa fa-trash" aria-hidden="true"></i></th>
@@ -95,7 +98,7 @@
 						<tbody>
 						</tbody>
 						<tfoot>
-							<tr class="text-center"><td colspan="2"></td><td><div class="pull-right"><b>@lang('stock_adjustment.total_amount'):</b> <span id="total_adjustment">0.00</span></div></td></tr>
+							<tr class="text-center"><td colspan="3"></td><td><div class="pull-right"><b>@lang('sale.total'):</b> <span id="total_adjustment">0.00</span></div></td></tr>
 						</tfoot>
 					</table>
 					</div>
@@ -120,6 +123,11 @@
 				</div>
 			</div>
 			<div class="row">
+				<div class="col-md-12 text-right">
+					<b>@lang('stock_adjustment.total_amount'):</b> <span id="final_total_text">0.00</span>
+				</div>
+				<br>
+				<br>
 				<div class="col-sm-12">
 					<button type="submit" id="save_stock_transfer" class="btn btn-primary pull-right">@lang('messages.save')</button>
 				</div>

@@ -72,4 +72,9 @@ class PurchaseLine extends Model
     {
         return $this->belongsTo(\App\TaxRate::class, 'tax_id');
     }
+
+    public function purchase_order_line()
+    {
+        return $this->belongsTo(\App\PurchaseLine::class, 'purchase_order_line_id');
+    }
 }

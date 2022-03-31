@@ -74,6 +74,7 @@ class PurchaseReturnController extends Controller
                         'transactions.transaction_date',
                         'transactions.ref_no',
                         'contacts.name',
+                        'contacts.supplier_business_name',
                         'transactions.status',
                         'transactions.payment_status',
                         'transactions.final_total',
@@ -143,6 +144,11 @@ class PurchaseReturnController extends Controller
                     '<span class="display_currency final_total" data-currency_symbol="true" data-orig-value="{{$final_total}}">{{$final_total}}</span>'
                 )
                 ->editColumn('transaction_date', '{{@format_datetime($transaction_date)}}')
+                ->editColumn('name', function($row){
+
+                    $name = !empty($row->name) ? $row->name : "";
+                    return $name . " " . $row->supplier_business_name;
+                })
                 ->editColumn(
                     'payment_status',
                     '<a href="{{ action("TransactionPaymentController@show", [$id])}}" class="view_payment_modal payment-status payment-status-label" data-orig-value="{{$payment_status}}" data-status-name="@if($payment_status != "paid"){{__(\'lang_v1.\' . $payment_status)}}@else{{__("lang_v1.received")}}@endif"><span class="label @payment_status($payment_status)">@if($payment_status != "paid"){{__(\'lang_v1.\' . $payment_status)}} @else {{__("lang_v1.received")}} @endif
@@ -365,8 +371,8 @@ class PurchaseReturnController extends Controller
                 $purchase_taxes[$purchase->tax->name] = $purchase->tax_amount;
             }
         }
-
-        $activities = Activity::forSubject($purchase->return_parent)
+        $return = !empty($purchase->return_parent) ? $purchase->return_parent : $purchase;
+        $activities = Activity::forSubject($return)
            ->with(['causer', 'subject'])
            ->latest()
            ->get();

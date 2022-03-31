@@ -86,7 +86,6 @@ return [
     'brand' => 'Brand',
     'tax_rate' => 'Tax rate',
     'unit' => 'Unit',
-    'expense.access' => 'Access expenses',
     'access_locations' =>'Access locations',
     'all_locations' => 'All Locations',
     'dashboard' => 'Home',

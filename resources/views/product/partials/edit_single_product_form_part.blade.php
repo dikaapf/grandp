@@ -56,7 +56,7 @@
                         @if($action !== 'duplicate')
                             @foreach($variation->media as $media)
                                 <div class="img-thumbnail">
-                                    <span class="badge bg-red delete-media" data-href="{{ action('ProductController@deleteMedia', ['media_id' => $media->id])}}"><i class="fa fa-close"></i></span>
+                                    <span class="badge bg-red delete-media" data-href="{{ action('ProductController@deleteMedia', ['media_id' => $media->id])}}"><i class="fas fa-times"></i></span>
                                     {!! $media->thumbnail() !!}
                                 </div>
                             @endforeach

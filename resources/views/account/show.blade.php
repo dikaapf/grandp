@@ -75,14 +75,25 @@
                     			<tr>
                                     <th>@lang( 'messages.date' )</th>
                                     <th>@lang( 'lang_v1.description' )</th>
+                                    <th>@lang( 'lang_v1.payment_method' )</th>
+                                    <th>@lang( 'lang_v1.payment_details' )</th>
                                     <th>@lang( 'brand.note' )</th>
                                     <th>@lang( 'lang_v1.added_by' )</th>
                                     <th>@lang('account.debit')</th>
-                    				<th>@lang('account.credit')</th>
+                                    <th>@lang('account.credit')</th>
                     				<th>@lang( 'lang_v1.balance' )</th>
                                     <th>@lang( 'messages.action' )</th>
                     			</tr>
                     		</thead>
+                            <tfoot>
+                                <tr class="bg-gray font-17 footer-total text-center">
+                                    <td colspan="6"><strong>@lang('sale.total'):</strong></td>
+                                    <td class="footer_total_debit"></td>
+                                    <td class="footer_total_credit"></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                     	</table>
                         </div>
                     @endcan
@@ -94,6 +105,9 @@
 
     <div class="modal fade account_model" tabindex="-1" role="dialog" 
     	aria-labelledby="gridSystemModalLabel">
+    </div>
+    <div class="modal fade account_model" tabindex="-1" role="dialog" 
+        aria-labelledby="gridSystemModalLabel" id="edit_account_transaction">
     </div>
 
 </section>
@@ -141,15 +155,29 @@
                             columns: [
                                 {data: 'operation_date', name: 'operation_date'},
                                 {data: 'sub_type', name: 'sub_type'},
+                                {data: 'method', name: 'TP.method'},
+                                {data: 'payment_details', name: 'payment_details', searchable: false},
                                 {data: 'note', name: 'note'},
                                 {data: 'added_by', name: 'added_by'},
-                                {data: 'debit', name: 'amount'},
                                 {data: 'credit', name: 'amount'},
+                                {data: 'debit', name: 'amount'},
                                 {data: 'balance', name: 'balance'},
                                 {data: 'action', name: 'action'}
                             ],
                             "fnDrawCallback": function (oSettings) {
                                 __currency_convert_recursively($('#account_book'));
+                            },
+                            "footerCallback": function ( row, data, start, end, display ) {
+                                var footer_total_debit = 0;
+                                var footer_total_credit = 0;
+
+                                for (var r in data){
+                                    footer_total_debit += $(data[r].credit).data('orig-value') ? parseFloat($(data[r].credit).data('orig-value')) : 0;
+                                    footer_total_credit += $(data[r].debit).data('orig-value') ? parseFloat($(data[r].debit).data('orig-value')) : 0;
+                                }
+
+                                $('.footer_total_debit').html(__currency_trans_from_en(footer_total_debit));
+                                $('.footer_total_credit').html(__currency_trans_from_en(footer_total_credit));
                             }
                         });
 
@@ -160,6 +188,37 @@
             $('#transaction_date_range').val('');
             account_book.ajax.reload();
         });
+
+        $('#edit_account_transaction').on('shown.bs.modal', function(e) {
+            $('#edit_account_transaction_form').validate({
+                submitHandler: function(form) {
+                    e.preventDefault();
+                    var data = $(form).serialize();
+                    $.ajax({
+                        method: 'POST',
+                        url: $(form).attr('action'),
+                        dataType: 'json',
+                        data: data,
+                        beforeSend: function(xhr) {
+                            __disable_submit_button($(form).find('button[type="submit"]'));
+                        },
+                        success: function(result) {
+                            if (result.success == true) {
+                                $('#edit_account_transaction').modal('hide');
+                                toastr.success(result.msg);
+
+                                if (typeof(account_book) != 'undefined') {
+                                    account_book.ajax.reload();
+                                }
+                                
+                            } else {
+                                toastr.error(result.msg);
+                            }
+                        },
+                    });
+                },
+            });
+        })
 
     });
 

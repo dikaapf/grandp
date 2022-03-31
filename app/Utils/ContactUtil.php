@@ -76,7 +76,7 @@ class ContactUtil extends Util
     {
         $contact = Contact::where('contacts.id', $contact_id)
                     ->where('contacts.business_id', $business_id)
-                    ->join('transactions AS t', 'contacts.id', '=', 't.contact_id')
+                    ->leftjoin('transactions AS t', 'contacts.id', '=', 't.contact_id')
                     ->with(['business'])
                     ->select(
                         DB::raw("SUM(IF(t.type = 'purchase', final_total, 0)) as total_purchase"),
@@ -113,8 +113,20 @@ class ContactUtil extends Util
             if (isset($input['opening_balance'])) {
                 unset($input['opening_balance']);
             }
+
+            //Assigned the user
+            $assigned_to_users = [];;
+            if(!empty($input['assigned_to_users'])){
+                $assigned_to_users = $input['assigned_to_users'];
+                unset($input['assigned_to_users']);
+            }
             
             $contact = Contact::create($input);
+
+            //Assigned the user
+            if(!empty($assigned_to_users)){
+                $contact->userHavingAccess()->sync($assigned_to_users);
+            }
 
             //Add opening balance
             if (!empty($opening_balance)) {
@@ -148,10 +160,17 @@ class ContactUtil extends Util
             $ob_transaction =  Transaction::where('contact_id', $id)
                                     ->where('type', 'opening_balance')
                                     ->first();
-            $opening_balance = isset($input['opening_balance']) ? $input['opening_balance'] : 0;
 
+            $opening_balance = isset($input['opening_balance']) ? $input['opening_balance'] : 0;
             if (isset($input['opening_balance'])) {
                 unset($input['opening_balance']);
+            }
+
+            //Assigned the user
+            $assigned_to_users = [];;
+            if(!empty($input['assigned_to_users'])){
+                $assigned_to_users = $input['assigned_to_users'];
+                unset($input['assigned_to_users']);
             }
             
             $contact = Contact::where('business_id', $business_id)->findOrFail($id);
@@ -159,7 +178,14 @@ class ContactUtil extends Util
                 $contact->$key = $value;
             }
             $contact->save();
+
+
+            //Assigned the user
+            if(!empty($assigned_to_users)){
+                $contact->userHavingAccess()->sync($assigned_to_users);
+            }
             
+            //Opening balance update
             $transactionUtil = new TransactionUtil();
             if (!empty($ob_transaction)) {
                 $opening_balance_paid = $transactionUtil->getTotalAmountPaid($ob_transaction->id);
@@ -199,6 +225,10 @@ class ContactUtil extends Util
            $query->onlySuppliers();
         } elseif ($type == 'customer') {
             $query->onlyCustomers();
+        } else {
+            if (auth()->check() && ( (!auth()->user()->can('customer.view') && auth()->user()->can('customer.view_own'))) || (!auth()->user()->can('supplier.view') && auth()->user()->can('supplier.view_own')) ) {
+                $query->onlyOwnContact();
+            }
         }
         if (!empty($contact_ids)) {
             $query->whereIn('contacts.id', $contact_ids);
@@ -208,7 +238,9 @@ class ContactUtil extends Util
             'contacts.*', 
             'cg.name as customer_group',
             DB::raw("SUM(IF(t.type = 'opening_balance', final_total, 0)) as opening_balance"),
-            DB::raw("SUM(IF(t.type = 'opening_balance', (SELECT SUM(IF(is_return = 1,-1*amount,amount)) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as opening_balance_paid")
+            DB::raw("SUM(IF(t.type = 'opening_balance', (SELECT SUM(IF(is_return = 1,-1*amount,amount)) FROM transaction_payments WHERE transaction_payments.transaction_id=t.id), 0)) as opening_balance_paid"),
+            DB::raw("MAX(DATE(transaction_date)) as max_transaction_date"),
+            't.transaction_date'
         ]);
 
         if (in_array($type, ['supplier', 'both'])) {

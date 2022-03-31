@@ -181,8 +181,11 @@ class CashRegisterController extends Controller
         $details = $this->cashRegisterUtil->getRegisterTransactionDetails($user_id, $open_time, $close_time, $is_types_of_service_enabled);
         
         $payment_types = $this->cashRegisterUtil->payment_types($register_details->location_id, true, $business_id);
+
+        $pos_settings = !empty(request()->session()->get('business.pos_settings')) ? json_decode(request()->session()->get('business.pos_settings'), true) : [];
+
         return view('cash_register.close_register_modal')
-                    ->with(compact('register_details', 'details', 'payment_types'));
+                    ->with(compact('register_details', 'details', 'payment_types', 'pos_settings'));
     }
 
     /**
@@ -206,12 +209,12 @@ class CashRegisterController extends Controller
                 return redirect()->action('HomeController@index')->with('status', $output);
             }
             
-            $input = $request->only(['closing_amount', 'total_card_slips', 'total_cheques',
-                                    'closing_note']);
+            $input = $request->only(['closing_amount', 'total_card_slips', 'total_cheques', 'closing_note']);
             $input['closing_amount'] = $this->cashRegisterUtil->num_uf($input['closing_amount']);
             $user_id = $request->input('user_id');
             $input['closed_at'] = \Carbon::now()->format('Y-m-d H:i:s');
             $input['status'] = 'close';
+            $input['denominations'] = !empty(request()->input('denominations')) ? json_encode(request()->input('denominations')) : null;
 
             CashRegister::where('user_id', $user_id)
                                 ->where('status', 'open')

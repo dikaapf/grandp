@@ -22,10 +22,13 @@ class Contact extends Authenticatable
     protected $guarded = ['id'];
 
     /**
-     * The attributes that should be mutated to dates.
+     * The attributes that should be cast to native types.
      *
      * @var array
      */
+    protected $casts = [
+        'shipping_custom_field_details' => 'array',
+    ];
     
 
     /**
@@ -41,24 +44,62 @@ class Contact extends Authenticatable
         return $query->where('contacts.contact_status', 'active');
     }
 
+    /**
+    * Filters only own created suppliers or has access to the supplier
+    */
     public function scopeOnlySuppliers($query)
     {
+        if (!auth()->user()->can('supplier.view') && !auth()->user()->can('supplier.view_own')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $query->whereIn('contacts.type', ['supplier', 'both']);
 
         if (auth()->check() && !auth()->user()->can('supplier.view') && auth()->user()->can('supplier.view_own')) {
-            $query->where('contacts.created_by', auth()->user()->id);
+            $query->leftjoin('user_contact_access AS ucas', 'contacts.id', 'ucas.contact_id');
+            $query->where( function($q){
+                $user_id = auth()->user()->id;
+                $q->where('contacts.created_by', $user_id)
+                    ->orWhere('ucas.user_id', $user_id);
+            });
         }
 
         return $query;
     }
 
+    /**
+    * Filters only own created customers or has access to the customer
+    */
     public function scopeOnlyCustomers($query)
     {
+        if (!auth()->user()->can('customer.view') && !auth()->user()->can('customer.view_own')) {
+            abort(403, 'Unauthorized action.');
+        }
+            
         $query->whereIn('contacts.type', ['customer', 'both']);
 
         if (auth()->check() && !auth()->user()->can('customer.view') && auth()->user()->can('customer.view_own')) {
-            $query->where('contacts.created_by', auth()->user()->id);
+            $query->leftjoin('user_contact_access AS ucas', 'contacts.id', 'ucas.contact_id');
+            $query->where( function($q){
+                $user_id = auth()->user()->id;
+                $q->where('contacts.created_by', $user_id)
+                    ->orWhere('ucas.user_id', $user_id);
+            });
         }
+        return $query;
+    }
+
+    /**
+    * Filters only own created contact or has access to the contact
+    */
+    public function scopeOnlyOwnContact($query)
+    {
+        $query->leftjoin('user_contact_access AS ucas', 'contacts.id', 'ucas.contact_id');
+        $query->where( function($q){
+            $user_id = auth()->user()->id;
+            $q->where('contacts.created_by', $user_id)
+                ->orWhere('ucas.user_id', $user_id);
+        });
         return $query;
     }
 
@@ -91,21 +132,26 @@ class Contact extends Authenticatable
 
         if ($append_id) {
             $query->select(
-                DB::raw("IF(contact_id IS NULL OR contact_id='', name, CONCAT(name, ' - ', COALESCE(supplier_business_name, ''), '(', contact_id, ')')) AS supplier"),
-                'id'
+                DB::raw("IF(contacts.contact_id IS NULL OR contacts.contact_id='', name, CONCAT(name, ' - ', COALESCE(supplier_business_name, ''), '(', contacts.contact_id, ')')) AS supplier"),
+                'contacts.id'
                     );
         } else {
             $query->select(
-                'id',
+                'contacts.id',
                 DB::raw("IF (supplier_business_name IS not null, CONCAT(name, ' (', supplier_business_name, ')'), name) as supplier")
             );
         }
         
         if (auth()->check() && !auth()->user()->can('supplier.view') && auth()->user()->can('supplier.view_own')) {
-            $query->where('contacts.created_by', auth()->user()->id);
+            $query->leftjoin('user_contact_access AS ucas', 'contacts.id', 'ucas.contact_id');
+            $query->where( function($q){
+                $user_id = auth()->user()->id;
+                $q->where('contacts.created_by', $user_id)
+                    ->orWhere('ucas.user_id', $user_id);
+            });
         }
 
-        $contacts = $query->pluck('supplier', 'id');
+        $contacts = $query->pluck('supplier', 'contacts.id');
 
         //Prepend none
         if ($prepend_none) {
@@ -241,7 +287,7 @@ class Contact extends Authenticatable
             $address_array[] = $this->supplier_business_name;
         }
         if (!empty($this->name)) {
-            $address_array[] = '<br>' . $this->name;
+            $address_array[] = !empty($this->supplier_business_name) ? '<br>' . $this->name : $this->name;
         }
         if (!empty($this->address_line_1)) {
             $address_array[] = '<br>' . $this->address_line_1;
@@ -268,5 +314,82 @@ class Contact extends Authenticatable
         }
 
         return $address;
+    }
+
+    public function getFullNameAttribute()
+    {
+        $name_array = [];
+        if (!empty($this->prefix)) {
+            $name_array[] = $this->prefix;
+        }
+        if (!empty($this->first_name)) {
+            $name_array[] = $this->first_name;
+        }
+        if (!empty($this->middle_name)) {
+            $name_array[] = $this->middle_name;
+        }
+        if (!empty($this->last_name)) {
+            $name_array[] = $this->last_name;
+        }
+        
+        return implode(' ', $name_array);
+    }
+
+    public function getFullNameWithBusinessAttribute()
+    {
+        $name_array = [];
+        if (!empty($this->prefix)) {
+            $name_array[] = $this->prefix;
+        }
+        if (!empty($this->first_name)) {
+            $name_array[] = $this->first_name;
+        }
+        if (!empty($this->middle_name)) {
+            $name_array[] = $this->middle_name;
+        }
+        if (!empty($this->last_name)) {
+            $name_array[] = $this->last_name;
+        }
+        
+        $full_name = implode(' ', $name_array);
+        $business_name = !empty($this->supplier_business_name) ? $this->supplier_business_name . ', ' : '';
+
+        return $business_name . $full_name;
+    }
+
+    public function getContactAddressArrayAttribute()
+    {
+        $address_array = [];
+        if (!empty($this->address_line_1)) {
+            $address_array[] = $this->address_line_1;
+        }
+        if (!empty($this->address_line_2)) {
+            $address_array[] = $this->address_line_2;
+        }
+        if (!empty($this->city)) {
+            $address_array[] = $this->city;
+        }
+        if (!empty($this->state)) {
+            $address_array[] = $this->state;
+        }
+        if (!empty($this->country)) {
+            $address_array[] = $this->country;
+        }
+        if (!empty($this->zip_code)) {
+            $address_array[] = $this->zip_code;
+        }
+
+        return $address_array;
+    }
+
+
+    /**
+     * All user who have access to this contact
+     * Applied only when selected_contacts is true for a user in
+     * users table
+     */
+    public function userHavingAccess()
+    {
+        return $this->belongsToMany(\App\User::class, 'user_contact_access');
     }
 }

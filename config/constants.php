@@ -33,7 +33,7 @@ return [
     'document_size_limit' => '5000000', //in Bytes,
     'image_size_limit' => '5000000', //in Bytes
 
-    'asset_version' => 40,
+    'asset_version' => 477,
 
     'disable_purchase_in_other_currency' => true,
     
@@ -73,4 +73,9 @@ return [
     'enable_crm_call_log' => false,
     'enable_product_bulk_edit' => false,  //Will be depreciated in future
     'enable_convert_draft_to_invoice' => false, //Experimental beta feature.
+    'enable_download_pdf' => false,         //Experimental feature
+    'invoice_scheme_separator' => '-',
+    'show_payments_recovered_today' => false, //Displays payment recovered today table on dashboard
+    'enable_b2b_marketplace' => false,
+    'enable_contact_assign' => false, //Used in add/edit contacts screen
 ];

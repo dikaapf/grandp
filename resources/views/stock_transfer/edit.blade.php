@@ -81,10 +81,13 @@
 								<th class="col-sm-4 text-center">	
 									@lang('sale.product')
 								</th>
-								<th class="col-sm-3 text-center">
+								<th class="col-sm-2 text-center">
 									@lang('sale.qty')
 								</th>
-								<th class="col-sm-3 text-center">
+								<th class="col-sm-2 text-center">
+									@lang('sale.unit_price')
+								</th>
+								<th class="col-sm-2 text-center">
 									@lang('sale.subtotal')
 								</th>
 								<th class="col-sm-2 text-center"><i class="fa fa-trash" aria-hidden="true"></i></th>
@@ -96,7 +99,7 @@
 								$subtotal = 0;
 							@endphp
 							@foreach($products as $product)
-								@include('stock_transfer.partials.product_table_row', ['product' => $product, 'row_index' => $loop->index])
+								@include('stock_transfer.partials.product_table_row', ['product' => $product, 'row_index' => $loop->index, 'sub_units' => !empty($product->unit_details) ? $product->unit_details : []])
 								@php
 									$product_row_index = $loop->index + 1;
 									$subtotal += ($product->quantity_ordered*$product->last_purchased_price);
@@ -104,11 +107,10 @@
 							@endforeach
 						</tbody>
 						<tfoot>
-							<tr class="text-center"><td colspan="2"></td><td><div class="pull-right"><b>@lang('stock_adjustment.total_amount'):</b> <span id="total_adjustment">{{@num_format($subtotal)}}</span></div></td></tr>
+							<tr class="text-center"><td colspan="3"></td><td><div class="pull-right"><b>@lang('sale.total'):</b> <span id="total_adjustment">{{@num_format($subtotal)}}</span></div></td></tr>
 						</tfoot>
 					</table>
 					<input type="hidden" id="product_row_index" value="{{$product_row_index}}">
-					<input type="hidden" id="total_amount" name="final_total" value="{{$subtotal}}">
 					</div>
 				</div>
 			</div>
@@ -130,7 +132,16 @@
 					</div>
 				</div>
 			</div>
+			@php
+				$final_total = $subtotal + $sell_transfer->shipping_charges;
+			@endphp
 			<div class="row">
+				<div class="col-md-12 text-right">
+					<input type="hidden" id="total_amount" name="final_total" value="{{$sell_transfer->final_total}}">
+					<b>@lang('stock_adjustment.total_amount'):</b> <span id="final_total_text">{{@num_format($final_total)}}</span>
+				</div>
+				<br>
+				<br>
 				<div class="col-sm-12">
 					<button type="submit" id="save_stock_transfer" class="btn btn-primary pull-right">@lang('messages.save')</button>
 				</div>

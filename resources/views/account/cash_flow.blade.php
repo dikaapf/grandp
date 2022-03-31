@@ -24,6 +24,12 @@
                             {!! Form::select('account_id', $accounts, '', ['class' => 'form-control', 'placeholder' => __('messages.all')]) !!}
                         </div>
                     </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {!! Form::label('cash_flow_location_id',  __('purchase.business_location') . ':') !!}
+                            {!! Form::select('cash_flow_location_id', $business_locations, null, ['class' => 'form-control select2', 'style' => 'width:100%']); !!}
+                        </div>
+                    </div>
                     <div class="col-sm-4">
                         <div class="form-group">
                             {!! Form::label('transaction_date_range', __('report.date_range') . ':') !!}
@@ -58,11 +64,22 @@
                                     <th>@lang( 'messages.date' )</th>
                                     <th>@lang( 'account.account' )</th>
                                     <th>@lang( 'lang_v1.description' )</th>
-                    				<th>@lang('account.credit')</th>
+                                    <th>@lang( 'lang_v1.payment_method' )</th>
+                                    <th>@lang( 'lang_v1.payment_details' )</th>
                                     <th>@lang('account.debit')</th>
-                    				<th>@lang( 'lang_v1.balance' )</th>
+                    				<th>@lang('account.credit')</th>
+                    				<th>@lang( 'lang_v1.account_balance' ) @show_tooltip(__('lang_v1.account_balance_tooltip'))</th>
+                                    <th>@lang( 'lang_v1.total_balance' ) @show_tooltip(__('lang_v1.total_balance_tooltip'))</th>
                     			</tr>
                     		</thead>
+                            <tfoot>
+                                <tr class="bg-gray font-17 footer-total text-center">
+                                    <td colspan="5"><strong>@lang('sale.total'):</strong></td>
+                                    <td class="footer_total_debit"></td>
+                                    <td class="footer_total_credit"></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
                     	</table>
                         </div>
                     @endcan
@@ -112,6 +129,8 @@
                         d.type = $('#transaction_type').val();
                         d.start_date = start,
                         d.end_date = end
+                        d.location_id = $('#cash_flow_location_id').val();
+
                     }
                 },
             "ordering": false,
@@ -120,15 +139,30 @@
                 {data: 'operation_date', name: 'operation_date'},
                 {data: 'account_name', name: 'account_name'},
                 {data: 'sub_type', name: 'sub_type'},
-                {data: 'credit', name: 'amount'},
+                {data: 'method', name: 'TP.method'},
+                {data: 'payment_details', name: 'payment_details', searchable: false},
                 {data: 'debit', name: 'amount'},
+                {data: 'credit', name: 'amount'},
                 {data: 'balance', name: 'balance'},
+                {data: 'total_balance', name: 'total_balance'},
             ],
             "fnDrawCallback": function (oSettings) {
                 __currency_convert_recursively($('#cash_flow_table'));
+            },
+            "footerCallback": function ( row, data, start, end, display ) {
+                var footer_total_debit = 0;
+                var footer_total_credit = 0;
+
+                for (var r in data){
+                    footer_total_debit += $(data[r].debit).data('orig-value') ? parseFloat($(data[r].debit).data('orig-value')) : 0;
+                    footer_total_credit += $(data[r].credit).data('orig-value') ? parseFloat($(data[r].credit).data('orig-value')) : 0;
+                }
+
+                $('.footer_total_debit').html(__currency_trans_from_en(footer_total_debit));
+                $('.footer_total_credit').html(__currency_trans_from_en(footer_total_credit));
             }
         });
-        $('#transaction_type, #account_id').change( function(){
+        $('#transaction_type, #account_id, #cash_flow_location_id').change( function(){
             cash_flow_table.ajax.reload();
         });
         $('#transaction_date_range').on('cancel.daterangepicker', function(ev, picker) {
